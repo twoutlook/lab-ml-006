@@ -54,8 +54,29 @@ export class CubeView {
    * opts.anim  轉動中的話 { face: "U", angle: 弧度 }（順時針是負的）
    * opts.dim   要淡掉的貼紙 index Set（用來強調某幾片）
    */
+  /** 方塊的黑色本體。轉動中那一層會離開本體，只畫貼紙的話會從縫隙看穿到背景，
+   *  看起來像有幾片飛出去了。真的方塊裡面是黑色的塑膠核心，補上就自然了。
+   *  作法：把一個略小的立方體八個角投影出來，取凸包（投影後是六邊形）填滿。 */
+  drawCore(ctx, cx, cy, scale) {
+    const n = this.cube.n * 0.97;
+    const pts = [];
+    for (const sx of [-1, 1]) for (const sy of [-1, 1]) for (const sz of [-1, 1]) {
+      const [X, Y] = project([sx * n, sy * n, sz * n], this.yaw, this.pitch);
+      pts.push([cx + X * scale, cy + Y * scale]);
+    }
+    const gx = pts.reduce((a, p) => a + p[0], 0) / 8;
+    const gy = pts.reduce((a, p) => a + p[1], 0) / 8;
+    pts.sort((a, b) => Math.atan2(a[1] - gy, a[0] - gx) - Math.atan2(b[1] - gy, b[0] - gx));
+    ctx.fillStyle = "#0c0e12";
+    ctx.beginPath();
+    pts.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)));
+    ctx.closePath();
+    ctx.fill();
+  }
+
   draw(ctx, state, opts) {
     const { cx, cy, scale } = opts;
+    if (opts.core !== false) this.drawCore(ctx, cx, cy, scale);
     const anim = opts.anim || null;
     const n = this.cube.n;
     const BASIS = this.cube.geometry;

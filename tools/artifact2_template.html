@@ -1,0 +1,763 @@
+<title>先解角，再解邊</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chivo:wght@600;700;900&family=IBM+Plex+Mono:wght@400;500;600&family=Noto+Sans+TC:wght@400;500;700&family=Source+Sans+3:wght@400;600&display=swap">
+<!--STYLE-->
+<style>
+/* 這一頁多出來的東西：兩把尺夾住一個未知數 */
+.squeeze { margin: 26px 0 30px; }
+.sq-track { position: relative; height: 74px; }
+.sq-track::before { content: ""; position: absolute; left: 0; right: 0; top: 34px; height: 1px; background: var(--line); }
+.sq-band { position: absolute; top: 26px; height: 17px; background: var(--estimate-w); border-radius: 3px; }
+.sq-mark { position: absolute; top: 22px; width: 3px; height: 25px; border-radius: 1px; }
+.sq-lab { position: absolute; font: 500 12px "IBM Plex Mono", monospace; color: var(--muted); white-space: nowrap; }
+.corner-note { font-size: 12.5px; color: var(--muted); }
+</style>
+
+<div class="wrap">
+
+<div class="top">
+  <div class="brand">lab-ml-006 · GOAL 002 · corners first</div>
+  <div class="switches">
+    <button class="switch" id="lz" aria-pressed="true">中文</button>
+    <button class="switch" id="le" aria-pressed="false">EN</button>
+  </div>
+</div>
+
+<header class="hero">
+  <h1 class="zh">先解角，<br><em>再解邊</em></h1>
+  <h1 class="en">Corners<br><em>first</em></h1>
+  <p class="lede zh">
+    1974 年 Ernő Rubik 第一次解開他自己發明的方塊，用的是先解角。人類這樣解是為了好記。
+    但同一個拆法在機器那邊有完全不同的用途——<strong>它是一把量尺。</strong>
+    有了它，上一篇說「量不出來」的東西，這一篇量出來了。
+  </p>
+  <p class="lede en">
+    When Ernő Rubik first solved his own cube in 1974, he solved the corners first. People do it that way
+    because it is easier to remember. The same decomposition has an entirely different use on the machine
+    side — <strong>it is a ruler.</strong> With it, the thing the previous piece called unmeasurable
+    becomes measurable.
+  </p>
+  <div class="stats" id="heroStats"></div>
+</header>
+
+<p style="margin:26px 0 0" class="corner-note">
+  <span class="zh">承接上一篇：</span><span class="en">Follows on from: </span>
+  <a href="__ARTIFACT1_URL__" target="_blank" rel="noopener"><span class="zh">魔術方塊還要幾步</span><span class="en">How far is this?</span></a>
+  <!--YT_START--> · <a href="__YT_URL__" target="_blank" rel="noopener"><span class="zh">▶ 這一篇的影片</span><span class="en">▶ video for this piece</span></a><!--YT_END-->
+</p>
+
+<!-- ═══ 人類 ═══ -->
+<section>
+  <div class="gauge"><div class="tick">
+    <div class="k">1974</div>
+    <div class="kl zh">Rubik 自己第一次解開他的方塊<br>用的就是先解角</div>
+    <div class="kl en">Rubik's own first solve of his own cube — corners first</div>
+  </div></div>
+  <div class="body">
+    <h2 class="zh">人為什麼先解角</h2>
+    <h2 class="en">Why people solve corners first</h2>
+    <p class="zh">
+      因為八個角是「少而硬」的那一半：只有 8 顆，但每一顆有三個面，位置和朝向都要對。
+      先把它們固定下來，剩下的十二條邊就變成一個比較單純的問題。
+      這一派叫 corners-first，1980 年代很流行；1981 年 Marc Waterman 和 Daan Krammer 的
+      Waterman method 是純 CF 的代表作，發展出上百條解邊的手順和完整的 CLL。
+    </p>
+    <p class="en">
+      Because the eight corners are the small, awkward half: only eight pieces, but each has three faces,
+      and both position and twist have to be right. Pin them down and the twelve edges become a simpler
+      problem. The family is called corners-first; it was popular through the 1980s, and the 1981 Waterman
+      method by Marc Waterman and Daan Krammer is its most thorough example, with hundreds of edge
+      algorithms and full CLL.
+    </p>
+    <p class="zh">
+      重點是<strong>人類這樣拆的理由是記憶，不是效率</strong>。先解角會讓總步數變多——
+      這一頁後面會把那個代價量出來。人腦沒有辦法一次考慮四千三百二十五京個局面，
+      只好把問題切成幾塊、每塊背幾十條手順。
+    </p>
+    <p class="en">
+      The point is that <strong>people decompose for memorability, not efficiency</strong>. Corners-first
+      makes the solution longer — this page measures exactly how much longer. A human cannot hold
+      43 quintillion states in mind, so the problem gets cut into pieces and each piece gets a few dozen
+      memorised sequences.
+    </p>
+  </div>
+</section>
+
+<!-- ═══ 機器 ═══ -->
+<section>
+  <div class="gauge"><div class="tick">
+    <div class="k">3</div>
+    <div class="kl zh">Korf 的最優解演算法用的<br>pattern database 數量：<br>角塊、6 條邊、另外 6 條邊</div>
+    <div class="kl en">pattern databases in Korf's optimal solver: corners, six edges, the other six</div>
+  </div></div>
+  <div class="body">
+    <h2 class="zh">機器也是這樣拆的，但用途相反</h2>
+    <h2 class="en">Machines cut it the same way — for the opposite reason</h2>
+    <p class="zh">
+      Richard Korf 1997 年第一次算出隨機方塊的<strong>最短解</strong>，用的方法是把方塊
+      投影到三個較小的子問題上，每個都整個窮舉存成一張表：角塊、六條邊、另外六條邊。
+      這三張表叫 pattern database。每一張都給出「只解這一部分要幾步」，
+      而那個數字是「解開整顆要幾步」的<strong>下界</strong>——因為解開整顆的每一步也都在動這一部分。
+      三個下界取最大的，就是一個保證不高估的 heuristic。
+    </p>
+    <p class="en">
+      Richard Korf's 1997 optimal solver projects the cube onto three smaller subproblems and enumerates
+      each one exhaustively: the corners, six edges, and the other six. Those tables are pattern databases.
+      Each says how many moves that part alone needs, and that count is a <strong>lower bound</strong> on
+      solving the whole cube, because every move of a full solution also moves that part. Take the largest
+      of the three and you have a heuristic that provably never over-estimates.
+    </p>
+    <p class="zh">
+      更早的 Thistlethwaite（1981）則是把方塊拆成四個嵌套的子群，一階一階往裡走，
+      原始上界 52 步，後來把每一階窮舉之後降到 45 步。
+    </p>
+    <p class="en">
+      Earlier still, Thistlethwaite (1981) walks the cube down a chain of four nested subgroups, one stage
+      at a time — 52 moves in the original bound, later reduced to 45 by exhaustively searching each stage.
+    </p>
+    <div class="callout">
+      <h3 class="zh">同一個直覺，兩種用途</h3>
+      <h3 class="en">One intuition, two uses</h3>
+      <p class="zh">
+        人類把「先解角」當成<strong>記憶的單位</strong>：這一段我背得起來。
+        機器把它當成<strong>下界的來源</strong>：這一段我數得完，所以我知道答案至少是多少。
+        這一頁做的就是後者——而做完之後才發現，它順手也能拿來檢驗前者。
+      </p>
+      <p class="en">
+        A human treats "corners first" as a <strong>unit of memory</strong>: this part I can hold in my head.
+        A machine treats it as a <strong>source of lower bounds</strong>: this part I can count, so I know
+        the answer is at least this much. This page does the second — and having done it, discovers it can
+        also be used to check the first.
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ 建表 ═══ -->
+<section>
+  <div class="gauge"><div class="tick">
+    <div class="k" id="gStates">–</div>
+    <div class="kl zh">3×3×3 角塊的全部狀態<br>= 8! × 3⁷，114 秒可以全部數完</div>
+    <div class="kl en">every corner state of a 3×3×3 = 8! × 3⁷ — counted in 114 seconds</div>
+  </div></div>
+  <div class="body">
+    <h2 class="zh">把角塊整個數完</h2>
+    <h2 class="en">Counting every corner state</h2>
+    <p class="zh">
+      八顆角有 <span class="num" id="nStates"></span> 種狀態。這個數字看起來大，
+      但跟整顆方塊的 4.3 × 10¹⁹ 比起來是可以數完的——事實上跟上一篇那個 2×2×2 的
+      3,674,160 是同一個量級（剛好 24 倍，因為 2×2×2 就是「固定一顆角」的角塊群）。
+      從解開狀態做一次廣度優先搜尋，114 秒之後，每一個角塊狀態離解開幾步全部在手上。
+    </p>
+    <p class="en">
+      Eight corners have <span class="num" id="nStates2"></span> states. That looks large, but against the
+      whole cube's 4.3 × 10¹⁹ it is countable — in fact it is the same order as the 3,674,160 of the 2×2×2
+      in the previous piece (exactly 24 times as many, since a 2×2×2 is the corner group with one corner
+      pinned). One breadth-first sweep from solved, 114 seconds, and every corner state's exact distance
+      is in hand.
+    </p>
+    <figure class="figure">
+      <div class="legend">
+        <span><i style="background:var(--truth)"></i><span class="zh">角塊狀態數</span><span class="en">corner states</span></span>
+      </div>
+      <canvas id="cPdb" width="900" height="330"></canvas>
+      <figcaption class="zh">
+        角塊的上帝之數是 <strong>14</strong>，平均 <span class="num" id="pdbMean"></span> 步——
+        跟 2×2×2 的 14 步、10.666 步幾乎一樣。
+        這不是巧合：兩者都是同一個角塊群，只差在 2×2×2 固定了一顆角（也就是把整顆方塊的
+        24 種擺法算成同一個局面）。兩邊各自獨立算出來卻對得上，是一次很便宜的交叉驗證。
+      </figcaption>
+      <figcaption class="en">
+        God's number for the corners is <strong>14</strong>, mean <span class="num" id="pdbMean2"></span> —
+        essentially the same as the 2×2×2's 14 and 10.666. Not a coincidence: both are the same corner
+        group, differing only in that the 2×2×2 pins one corner (folding the cube's 24 orientations into
+        one state). Two independent computations agreeing is a cheap and welcome cross-check.
+      </figcaption>
+    </figure>
+    <p class="cap zh">
+      能整個數完的關鍵是：角塊的「誰在哪」和「轉了幾度」在轉動下<strong>各自獨立</strong>——
+      <code>新 ori[M(i)] = (舊 ori[i] + 固定扭轉量) mod 3</code>，跟哪顆角在那裡無關。
+      所以 40,320 × 12 和 2,187 × 12 兩張小表就推得出全部 8,800 萬個狀態的鄰居，
+      整個 BFS 純向量化。
+    </p>
+    <p class="cap en">
+      What makes the full sweep cheap: for corners, "which piece is where" and "how it is twisted" transform
+      <strong>independently</strong> under a move — <code>new ori[M(i)] = (old ori[i] + fixed twist) mod 3</code>,
+      with no dependence on which corner sits there. So two small tables, 40,320 × 12 and 2,187 × 12,
+      generate the neighbours of all 88 million states, and the whole search vectorises.
+    </p>
+  </div>
+</section>
+
+<!-- ═══ E1 ═══ -->
+<section>
+  <div class="gauge"><div class="tick">
+    <div class="k" id="gE1">–</div>
+    <div class="kl zh">角塊表單獨當 heuristic<br>的解開率</div>
+    <div class="kl en">solve rate with the corner table as the only heuristic</div>
+  </div></div>
+  <div class="body">
+    <h2 class="zh">精確但片面，對上不精確但完整</h2>
+    <h2 class="en">Exact but partial, against approximate but complete</h2>
+    <p class="zh">
+      現在手上有兩種「還要幾步」的估計：一個是<strong>精確但只看角塊</strong>的表，
+      一個是<strong>看整顆但不精確</strong>的網路。同一批隨機方塊、其他設定都不動，換著用：
+    </p>
+    <p class="en">
+      There are now two ways to estimate "how far": a table that is <strong>exact but only sees the
+      corners</strong>, and a network that <strong>sees everything but is approximate</strong>.
+      Same cubes, same settings, swap the estimator:
+    </p>
+    <div class="scroller"><table>
+      <thead><tr>
+        <th>heuristic</th>
+        <th><span class="zh">平均估計值</span><span class="en">mean estimate</span></th>
+        <th><span class="zh">會高估嗎</span><span class="en">over-estimates?</span></th>
+        <th><span class="zh">解開率</span><span class="en">solved</span></th>
+        <th><span class="zh">平均步數</span><span class="en">mean moves</span></th>
+        <th><span class="zh">展開節點</span><span class="en">nodes</span></th>
+      </tr></thead>
+      <tbody id="e1Rows"></tbody>
+    </table></div>
+    <div class="callout">
+      <h3 class="zh">精確的那個，單獨用完全解不開</h3>
+      <h3 class="en">The exact one, alone, cannot solve a cube</h3>
+      <p class="zh" id="e1Text"></p>
+      <p class="en" id="e1TextE"></p>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ E2 ═══ -->
+<section>
+  <div class="gauge"><div class="tick">
+    <div class="k" id="gE2">–</div>
+    <div class="kl zh">3×3×3 上求出精確最短解的局面數<br>——這個專案的第一次</div>
+    <div class="kl en">3×3×3 states with a provably optimal solution — a first for this project</div>
+  </div></div>
+  <div class="body">
+    <h2 class="zh">3×3×3 第一次有正確答案</h2>
+    <h2 class="en">Ground truth on a 3×3×3, at last</h2>
+    <p class="zh">
+      上一篇結尾說：3×3×3 沒有正確答案，所以「解比最短解長幾步」量不出來。
+      角塊表把這句話改掉了一半——因為它<strong>保證不高估</strong>，
+      配上課本版的 A*（實作用 IDA*，見最後一節），找到的解就是<strong>可以證明的最短解</strong>。
+      代價是節點數隨深度暴漲，所以只做得到最短解 14 步以內。
+    </p>
+    <p class="en">
+      The previous piece ended by saying a 3×3×3 has no ground truth, so "how much longer than optimal"
+      cannot be measured. The corner table changes half of that: because it <strong>provably never
+      over-estimates</strong>, textbook A* over it (implemented as IDA*, see the last section) returns a
+      <strong>provably optimal</strong> solution. The cost grows steeply with depth, so this reaches
+      optimal solutions of up to 14 moves.
+    </p>
+    <div class="scroller"><table>
+      <thead><tr>
+        <th><span class="zh">打亂步數</span><span class="en">scramble depth</span></th>
+        <th><span class="zh">局面數</span><span class="en">cubes</span></th>
+        <th><span class="zh">精確最短解</span><span class="en">true optimal</span></th>
+        <th><span class="zh">展開節點</span><span class="en">nodes</span></th>
+      </tr></thead>
+      <tbody id="e2Rows"></tbody>
+    </table></div>
+    <p class="cap zh">
+      注意最短解一律小於打亂步數：亂轉會繞回來。這也是為什麼「打亂 k 步」不能當成「距離 k」。
+    </p>
+    <p class="cap en">
+      Note the optimum is always below the scramble depth — random turns double back. Which is why
+      "scrambled k moves" is not "k moves away".
+    </p>
+
+    <h3 style="margin-top:34px" class="zh">於是網路的誤差也量得出來了</h3>
+    <h3 style="margin-top:34px" class="en">And so the network's error becomes measurable</h3>
+    <p class="zh">
+      這張圖跟上一篇 2×2×2 那張是同一個做法，只是這次的橫軸是 3×3×3 的真實最短解。
+    </p>
+    <p class="en">
+      Same chart as the 2×2×2 one in the previous piece, except the x-axis is now a real 3×3×3 optimum.
+    </p>
+    <figure class="figure">
+      <div class="legend">
+        <span><i style="background:var(--truth)"></i><span class="zh">完全準的話會落在這條線上</span><span class="en">perfect would sit here</span></span>
+        <span><i style="background:var(--estimate)"></i><span class="zh">網路的估計 ±1σ</span><span class="en">network estimate ±1σ</span></span>
+        <span><i style="background:var(--muted)"></i><span class="zh">角塊表（下界）</span><span class="en">corner table (lower bound)</span></span>
+      </div>
+      <canvas id="cErr2" width="900" height="420"></canvas>
+      <figcaption class="zh" id="errCap"></figcaption>
+      <figcaption class="en" id="errCapE"></figcaption>
+    </figure>
+    <div class="stats" id="e2Stats"></div>
+  </div>
+</section>
+
+<!-- ═══ E3 ═══ -->
+<section>
+  <div class="gauge"><div class="tick">
+    <div class="k" id="gE3">–</div>
+    <div class="kl zh">隨機方塊的落差上界<br>（找到的解 − 下界）</div>
+    <div class="kl en">upper bound on the gap for a random cube (solution − lower bound)</div>
+  </div></div>
+  <div class="body">
+    <h2 class="zh">深的局面：夾，但夾不緊</h2>
+    <h2 class="en">Deep cubes: squeezed, but not tightly</h2>
+    <p class="zh">
+      隨機打亂的方塊求不出精確最短解（節點數爆炸），但可以<strong>夾</strong>：
+      角塊表給下界，找到的解給上界，真正的最短解一定在中間。
+    </p>
+    <p class="en">
+      A fully scrambled cube is out of reach for exact solving, but it can be <strong>bracketed</strong>:
+      the corner table gives a lower bound, the solution found gives an upper bound, and the true optimum
+      lies between.
+    </p>
+    <div class="squeeze"><div class="sq-track" id="sqTrack"></div></div>
+    <p class="cap zh" id="e3Cap"></p>
+    <p class="cap en" id="e3CapE"></p>
+    <p class="zh">
+      這個夾子很鬆，而且鬆的原因很明確：角塊表最多只能說 14，
+      但隨機方塊的真實最短解在 20 上下。要夾緊，得補上另外兩張表——
+      Korf 用的那兩張「六條邊」。那是這個方向的下一步。
+    </p>
+    <p class="en">
+      The bracket is loose, and it is loose for a clear reason: the corner table tops out at 14, while a
+      random cube's true optimum is around 20. Tightening it needs the other two tables — Korf's two
+      six-edge databases. That is the obvious next step.
+    </p>
+  </div>
+</section>
+
+<!-- ═══ E4 ═══ -->
+<section>
+  <div class="gauge"><div class="tick">
+    <div class="k" id="gE4">–</div>
+    <div class="kl zh">先解角要多付的步數<br>（跟一次解完比）</div>
+    <div class="kl en">extra moves the corners-first staging costs</div>
+  </div></div>
+  <div class="body">
+    <h2 class="zh">人類的分階段，到底值多少</h2>
+    <h2 class="en">What the human staging actually costs and buys</h2>
+    <p class="zh">
+      既然手上有精確的角塊表，就可以真的照人類的方式解一次：<strong>先把八個角轉回去
+      （而且保證是最短的，因為表就是那個子目標的精確距離），再解完剩下的。</strong>
+      跟一次解完比：
+    </p>
+    <p class="en">
+      With an exact corner table in hand, the human route can actually be run:
+      <strong>put the eight corners back first — provably optimally, since the table is that subgoal's exact
+      distance — then finish the rest.</strong> Against solving in one shot:
+    </p>
+    <div class="scroller"><table>
+      <thead><tr>
+        <th></th>
+        <th><span class="zh">總步數</span><span class="en">total moves</span></th>
+        <th><span class="zh">展開節點</span><span class="en">nodes</span></th>
+        <th><span class="zh">每顆耗時</span><span class="en">ms / cube</span></th>
+      </tr></thead>
+      <tbody id="e4Rows"></tbody>
+    </table></div>
+    <div class="callout">
+      <h3 class="zh">結論跟直覺一致，但數字比直覺具體</h3>
+      <h3 class="en">The direction is intuitive; the numbers are not</h3>
+      <p class="zh" id="e4Text"></p>
+      <p class="en" id="e4TextE"></p>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ IDA* ═══ -->
+<section>
+  <div class="gauge"><div class="tick">
+    <div class="k" id="gSpeed">–</div>
+    <div class="kl zh">IDA* 比 A* 快多少<br>（同一個 heuristic、同一批局面）</div>
+    <div class="kl en">IDA* over A*, same heuristic, same cubes</div>
+  </div></div>
+  <div class="body">
+    <h2 class="zh">為什麼換掉 A*</h2>
+    <h2 class="en">Why A* had to go</h2>
+    <p class="zh">
+      第一版用的是這個專案原本的批次加權 A*，把 weight 設成 1、終點改成展開時判定。
+      它是對的，但撐不到有趣的地方：每展開一個節點要做十二次
+      「把 54 個位元組轉成鍵、查字典、丟進堆積」，實測每個節點約 <strong id="usA">–</strong>。
+      這一輪最深的那批局面一顆要展開一千八百萬個節點——用 A* 要跑一小時以上。
+    </p>
+    <p class="en">
+      The first attempt reused this project's batched weighted A* with weight 1 and the goal test moved to
+      expansion. It is correct, but it cannot reach anywhere interesting: every expanded node does twelve
+      rounds of "turn 54 bytes into a key, hit a dictionary, push a heap" — about
+      <strong id="usA2">–</strong> per node, measured. The deepest cubes in this study expand eighteen
+      million nodes apiece — over an hour each at that rate.
+    </p>
+    <p class="zh">
+      IDA* 把 open/closed list 整個拿掉：深度優先，配一個 f 值上限，超過就回頭，
+      一輪沒找到就把上限提高。同一個節點會被重複走到，但每個節點只剩下「轉一步 + 查一次表」。
+      再加兩個東西：
+    </p>
+    <p class="en">
+      IDA* drops the open and closed lists entirely: depth-first with an f-limit, back off when exceeded,
+      raise the limit and go again. Nodes get revisited, but each one costs only "apply a move, read one
+      table entry". Plus two things:
+    </p>
+    <div class="scroller"><table>
+      <tbody>
+        <tr><td><span class="zh">角塊座標增量更新</span><span class="en">incremental corner coordinates</span></td>
+            <td><span class="zh">走一步 = 兩次陣列查表，不必從貼紙重算角塊在哪</span><span class="en">one move = two array lookups; no re-derivation from stickers</span></td></tr>
+        <tr><td><span class="zh">用 itemgetter 套用轉動</span><span class="en">apply moves with itemgetter</span></td>
+            <td><span class="zh">重排 54 個元素，C 寫的比 Python 迴圈快一個數量級</span><span class="en">reordering 54 elements in C rather than a Python loop</span></td></tr>
+        <tr><td><span class="zh">三條安全剪枝</span><span class="en">three safe prunings</span></td>
+            <td><span class="zh">不走反手、同一面不連三次、對面可交換所以固定順序</span><span class="en">no inverse of the last move, no three of a face in a row, fixed order within a commuting pair</span></td></tr>
+      </tbody>
+    </table></div>
+    <div class="scroller"><table>
+      <thead><tr>
+        <th></th>
+        <th><span class="zh">展開節點</span><span class="en">nodes</span></th>
+        <th><span class="zh">耗時</span><span class="en">time</span></th>
+        <th><span class="zh">每秒節點</span><span class="en">nodes/s</span></th>
+        <th><span class="zh">每節點</span><span class="en">per node</span></th>
+      </tr></thead>
+      <tbody id="idaRows"></tbody>
+    </table></div>
+    <p class="cap zh" id="idaCap"></p>
+    <p class="cap en" id="idaCapE"></p>
+    <div class="callout">
+      <h3 class="zh">值得記住的一件事</h3>
+      <h3 class="en">Worth remembering</h3>
+      <p class="zh">
+        這個倍數完全沒有換演算法的「聰明」——heuristic 一模一樣，展開的節點只有更多不會更少。
+        差別純粹是<strong>每個節點的簿記成本</strong>。上一篇的最後一節列了五個技術挑戰，
+        其中第三個就是「推論加速之後，優先佇列會變成瓶頸」。這裡就是那件事的實例：
+        把佇列整個拿掉，事情就成了。
+      </p>
+      <p class="en">
+        None of that speed-up comes from a cleverer algorithm — the heuristic is identical and IDA* expands
+        more nodes, not fewer. The entire difference is <strong>per-node bookkeeping</strong>. The previous
+        piece listed five technical obstacles, the third being "once inference gets faster, the priority
+        queue becomes the bottleneck". This is that, concretely: remove the queue and the thing works.
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ 還缺什麼 ═══ -->
+<section>
+  <div class="gauge"><div class="tick">
+    <div class="k" style="font-size:20px"><span class="zh">下一步</span><span class="en">next</span></div>
+    <div class="kl zh">Korf 的另外兩張表<br>：六條邊，與另外六條</div>
+    <div class="kl en">Korf's other two tables: six edges, and the other six</div>
+  </div></div>
+  <div class="body">
+    <h2 class="zh">還缺兩張表</h2>
+    <h2 class="en">Two tables short</h2>
+    <p class="zh">
+      這一頁只做了 Korf 三張表裡的第一張。另外兩張是「六條邊」，
+      各有 12P6 × 2⁶ = 42,577,920 個狀態，比角塊那張還小。
+      三張取最大之後下界會明顯變緊，深局面的夾子才夾得住，
+      最短解的可解深度也會往上推。
+    </p>
+    <p class="en">
+      This page builds the first of Korf's three tables. The other two cover six edges each,
+      12P6 × 2⁶ = 42,577,920 states apiece — smaller than the corner table. Taking the maximum of all
+      three tightens the bound substantially, which is what the deep-cube bracket needs, and pushes the
+      depth at which optimal solving stays feasible.
+    </p>
+    <p class="zh">
+      而更有意思的一個問題留在那裡沒動：既然精確的表跟學出來的網路各有各的毛病
+      （一個片面、一個不準），<strong>能不能讓網路去學「表算不出來的那一部分」</strong>？
+      也就是把 max(表, 網路) 換成 表 + 學出來的殘差。那就不是這一頁的範圍了。
+    </p>
+    <p class="en">
+      A more interesting question is left untouched: since the exact table and the learned network fail in
+      different ways — one is partial, the other inaccurate — <strong>could the network be trained on what
+      the table cannot see</strong>? That is, replace max(table, network) with table plus a learned
+      residual. Out of scope here.
+    </p>
+  </div>
+</section>
+
+<div class="foot">
+  <div class="links">
+    <a href="https://github.com/twoutlook/lab-ml-006/tree/goal002-corners-first" target="_blank" rel="noopener">GitHub · goal002-corners-first</a>
+    <a href="__ARTIFACT1_URL__" target="_blank" rel="noopener"><span class="zh">上一篇</span><span class="en">Previous piece</span></a>
+    <!--YT_START--><a href="__YT_URL__" target="_blank" rel="noopener"><span class="zh">影片</span><span class="en">Video</span></a><!--YT_END-->
+  </div>
+  <p class="zh" style="margin:0 0 10px">
+    參考來源：<a href="https://www.speedsolving.com/wiki/index.php/Corners_First" target="_blank" rel="noopener">Corners First（Speedsolving wiki）</a>、
+    <a href="https://www.speedsolving.com/wiki/index.php/Waterman_method" target="_blank" rel="noopener">Waterman method</a>、
+    <a href="https://en.wikipedia.org/wiki/Optimal_solutions_for_the_Rubik%27s_Cube" target="_blank" rel="noopener">Optimal solutions for the Rubik's Cube（Korf 的三張 pattern database）</a>、
+    <a href="https://www.speedsolving.com/wiki/index.php?title=Thistlethwaite's_algorithm" target="_blank" rel="noopener">Thistlethwaite's algorithm</a>
+  </p>
+  <p class="en" style="margin:0 0 10px">
+    Sources: <a href="https://www.speedsolving.com/wiki/index.php/Corners_First" target="_blank" rel="noopener">Corners First (Speedsolving wiki)</a>,
+    <a href="https://www.speedsolving.com/wiki/index.php/Waterman_method" target="_blank" rel="noopener">Waterman method</a>,
+    <a href="https://en.wikipedia.org/wiki/Optimal_solutions_for_the_Rubik%27s_Cube" target="_blank" rel="noopener">Optimal solutions for the Rubik's Cube (Korf's three pattern databases)</a>,
+    <a href="https://www.speedsolving.com/wiki/index.php?title=Thistlethwaite's_algorithm" target="_blank" rel="noopener">Thistlethwaite's algorithm</a>
+  </p>
+  <p style="margin:14px 0 0" class="dim">MarkLuce AI · Claude Code · Claude Opus 5</p>
+</div>
+</div>
+
+<script>
+const DATA = /*__DATA__*/;
+</script>
+<script type="module">
+/*__ENGINE__*/
+
+const $ = (id) => document.getElementById(id);
+const fmt = (n) => n.toLocaleString("en-US");
+const pct = (v, d = 1) => `${(v * 100).toFixed(d)}%`;
+const isEn = () => document.documentElement.getAttribute("data-lang") === "en";
+const T = (zh, en) => (isEn() ? en : zh);
+const css = (k) => getComputedStyle(document.documentElement).getPropertyValue(k).trim();
+
+function setLang(l) {
+  document.documentElement.setAttribute("data-lang", l);
+  $("lz").setAttribute("aria-pressed", String(l === "zh"));
+  $("le").setAttribute("aria-pressed", String(l === "en"));
+  paint();
+}
+$("lz").onclick = () => setLang("zh");
+$("le").onclick = () => setLang("en");
+
+const P = DATA.pdb, E1 = DATA.e1, E2 = DATA.e2, E3 = DATA.e3, E4 = DATA.e4, IV = DATA.ida;
+const usPer = (r) => (r.sec / r.nodes) * 1e6;
+const SPEED = IV.ida.nps / IV.astar.nps;
+const rowPdb = E1.find((r) => r.admissible);
+const rowNet = E1.find((r) => !r.admissible && !r.name.includes("∪"));
+const rowMax = E1.find((r) => r.name.includes("∪"));
+
+$("gStates").textContent = "88,179,840";
+$("nStates").textContent = fmt(P.states);
+$("nStates2").textContent = fmt(P.states);
+$("pdbMean").textContent = P.mean.toFixed(3);
+$("pdbMean2").textContent = P.mean.toFixed(3);
+$("gE1").textContent = pct(rowPdb.solve_rate, 0);
+$("gE2").textContent = fmt(E2.n);
+$("gE3").textContent = `${E3.mean_gap_upper.toFixed(1)} 步`;
+$("gE4").textContent = `+${(E4.staged.mean_len - E4.one_shot.mean_len).toFixed(1)}`;
+$("gSpeed").textContent = `${SPEED.toFixed(1)}×`;
+for (const id of ["usA", "usA2"]) {
+  const el = $(id);
+  if (el) el.textContent = `${usPer(IV.astar).toFixed(0)} µs`;
+}
+
+function paint() {
+  $("gE3").textContent = T(`${E3.mean_gap_upper.toFixed(1)} 步`, `${E3.mean_gap_upper.toFixed(1)} moves`);
+
+  $("heroStats").innerHTML = [
+    [fmt(P.states), T("角塊的全部狀態，全數完", "corner states, all enumerated"), "tru"],
+    [String(P.max), T("角塊的上帝之數", "God's number for the corners"), "tru"],
+    [fmt(E2.n), T("3×3×3 上求出的精確最短解", "provably optimal 3×3×3 solutions"), "tru"],
+    [E2.mae.toFixed(2), T("網路對這些局面的平均誤差", "network's mean error on them"), "est"],
+    [`+${(E4.staged.mean_len - E4.one_shot.mean_len).toFixed(1)}`, T("先解角要多付的步數", "moves the staging costs"), "est"],
+  ].map(([v, l, c]) => `<div class="stat"><b class="${c}">${v}</b><span>${l}</span></div>`).join("");
+
+  const nm = (r) => isEn()
+    ? r.name.replace("角塊距離表（精確）", "corner table (exact)").replace("學出來的網路", "learned network").replace(" ∪ ", " ∪ ")
+    : r.name;
+  $("e1Rows").innerHTML = E1.map((r) => `<tr${r.name.includes("∪") ? ' class="hl"' : ""}>
+    <td>${nm(r)}</td><td class="n">${r.mean_h.toFixed(2)}</td>
+    <td class="n ${r.admissible ? "tru" : "est"}">${r.admissible ? T("不會", "never") : T("會", "yes")}</td>
+    <td class="n">${pct(r.solve_rate, 0)}</td>
+    <td class="n">${r.mean_len == null ? "—" : r.mean_len.toFixed(2)}</td>
+    <td class="n">${fmt(Math.round(r.mean_nodes))}</td></tr>`).join("");
+
+  const saved = 1 - rowMax.mean_nodes / rowNet.mean_nodes;
+  $("e1Text").innerHTML =
+    `角塊表的平均估計是 <b>${rowPdb.mean_h.toFixed(2)}</b>，而隨機方塊的真實最短解在 20 上下——`
+    + `它太保守了，保守到搜尋找不到方向：單獨用的解開率是 <b>${pct(rowPdb.solve_rate, 0)}</b>。`
+    + `網路的估計 <b>${rowNet.mean_h.toFixed(2)}</b> 大得多，所以解得開。`
+    + `但把兩個取大的之後，節點數少了 <b>${pct(saved, 0)}</b>——`
+    + `因為在網路低估得特別離譜的那些局面上，角塊表把它拉了回來。`
+    + `<br><br>一句話：<b>精確但片面的東西，單獨用沒力，當補丁很有效。</b>`;
+  $("e1TextE").innerHTML =
+    `The corner table averages <b>${rowPdb.mean_h.toFixed(2)}</b> against a true optimum around 20 — so `
+    + `conservative that the search has nothing to steer by: on its own it solves `
+    + `<b>${pct(rowPdb.solve_rate, 0)}</b> of cubes. The network's <b>${rowNet.mean_h.toFixed(2)}</b> is much `
+    + `larger, and it does solve them. Take the maximum of the two and node counts drop by `
+    + `<b>${pct(saved, 0)}</b> — because on the states where the network under-estimates worst, the table `
+    + `pulls it back. <br><br>In one line: <b>exact but partial is useless alone and valuable as a patch.</b>`;
+
+  $("e2Rows").innerHTML = E2.by_depth.map((r) => `<tr>
+    <td class="n">${r.depth}</td><td class="n">${r.n}</td>
+    <td class="n tru">${r.mean_true.toFixed(2)}</td>
+    <td class="n">${fmt(r.mean_nodes)}</td></tr>`).join("");
+
+  $("e2Stats").innerHTML = [
+    [E2.mae.toFixed(2), T("網路的平均誤差（對精確答案）", "network mean error vs exact"), "est"],
+    [pct(E2.within_1), T("誤差在 1 步以內", "within 1 move"), "est"],
+    [pct(E2.over_rate), T("高估", "over-estimated"), "est"],
+    [(E2.bias >= 0 ? "+" : "") + E2.bias.toFixed(2),
+     T("平均偏差 — 這個零是假的", "mean bias — a misleading zero"), "warn"],
+  ].map(([v, l, c]) => `<div class="stat"><b class="${c}">${v}</b><span>${l}</span></div>`).join("");
+
+  const last = E2.by_true_net[E2.by_true_net.length - 1];
+  // 「穿過對角線」= 最後一個估計值還 >= 真值的點，跟它的下一個點之間。
+  // 寫成「第一個 mean < d」會被浮點捨入誤判（最淺那格的平均是 1.999 這種數字）。
+  const over = E2.by_true_net.filter((r) => r.mean >= r.d - 1e-9).map((r) => r.d);
+  const lo = over.length ? Math.max(...over) : null;
+  const hi = Math.min(...E2.by_true_net.filter((r) => r.d > lo).map((r) => r.d));
+  const cross = lo != null && isFinite(hi) ? `${lo}~${hi}` : "?";
+  const netH = E1.find((r) => !r.admissible && !r.name.includes("∪")).mean_h;
+  $("errCap").innerHTML =
+    `橘線是網路，灰線是角塊表。<b>橘線在真實最短解 ${cross} 步之間穿過對角線</b>——`
+    + `比它淺的局面高估，比它深的局面低估。這就是回歸往平均縮，跟上一篇 2×2×2 那張圖同一個形狀，`
+    + `只是這次是在真的 3×3×3 上量到的。灰線永遠在下面，它必須在下面，因為它是下界。`
+    + `<br><br><b>注意這張圖只到 ${last.d} 步</b>——再深就求不出精確最短解了。`
+    + `而隨機方塊的真實最短解在 20 上下，正好落在量不到的地方，`
+    + `所以上一篇說的「對深局面一律回答 14 左右」在這裡看不到，只能從下一節的夾擠間接推。`;
+  $("errCapE").innerHTML =
+    `Orange is the network, grey is the corner table. <b>The orange line crosses the diagonal at a true `
+    + `optimum of about ${cross}</b> — over-estimating below it, under-estimating above. That is `
+    + `regression to the mean, the same shape as the 2×2×2 chart in the previous piece, now measured on a `
+    + `real 3×3×3. The grey line stays below throughout; it has to, being a lower bound.`
+    + `<br><br><b>Note the chart stops at ${last.d}</b> — beyond that, exact solutions are out of reach. `
+    + `A random cube's true optimum sits around 20, squarely in the unmeasurable region, so the previous `
+    + `piece's "answers about 14 for everything deep" cannot be seen here — only inferred from the bracket `
+    + `in the next section.`;
+
+  $("e3Cap").innerHTML = T(
+    `${E3.n} 顆隨機方塊：角塊表給的下界平均 <b>${E3.mean_lower.toFixed(2)}</b> 步，`
+      + `搜尋找到的解平均 <b>${E3.mean_found.toFixed(2)}</b> 步。真正的最短解在中間某處，`
+      + `所以「多走了幾步」最多是 <b>${E3.mean_gap_upper.toFixed(2)}</b> 步。`,
+    `${E3.n} random cubes: the corner table's lower bound averages <b>${E3.mean_lower.toFixed(2)}</b> moves, `
+      + `the solutions found average <b>${E3.mean_found.toFixed(2)}</b>. The true optimum is somewhere between, `
+      + `so the excess is at most <b>${E3.mean_gap_upper.toFixed(2)}</b> moves.`);
+
+  const one = E4.one_shot, two = E4.staged;
+  $("e4Rows").innerHTML = [
+    [T("一次解完", "one shot"), one, ""],
+    [T("先解角，再解完", "corners first, then the rest"), two, ' class="hl"'],
+  ].map(([n, r, cls]) => `<tr${cls}><td>${n}</td>
+    <td class="n">${r.mean_len.toFixed(2)}${r.mean_stage1 ? T(`　（角 ${r.mean_stage1.toFixed(1)} + 其餘 ${r.mean_stage2.toFixed(1)}）`, ` (${r.mean_stage1.toFixed(1)} + ${r.mean_stage2.toFixed(1)})`) : ""}</td>
+    <td class="n">${fmt(Math.round(r.mean_nodes))}</td>
+    <td class="n">${Math.round(r.ms)}</td></tr>`).join("");
+
+  const dLen = two.mean_len - one.mean_len;
+  const dNode = 1 - two.mean_nodes / one.mean_nodes;
+  $("e4Text").innerHTML =
+    `先解角的總步數多了 <b>${dLen.toFixed(1)}</b> 步（${pct(dLen / one.mean_len, 0)}），`
+    + `但第二段要展開的節點少了 <b>${pct(dNode, 0)}</b>。`
+    + `<br><br>這正是人類那樣解的理由，只是人類換到的不是節點數，是<b>記憶量</b>：`
+    + `把問題切成兩塊之後，每一塊都小到可以背。`
+    + `代價一樣是那多出來的 ${dLen.toFixed(1)} 步——`
+    + `所以速解高手最後都不用純角先法，而是用步數更省、但要背更多的方法。`;
+  $("e4TextE").innerHTML =
+    `Staging costs <b>${dLen.toFixed(1)}</b> extra moves (${pct(dLen / one.mean_len, 0)}) and saves `
+    + `<b>${pct(dNode, 0)}</b> of the nodes in the second stage. `
+    + `<br><br>That is exactly why people solve this way, except what a person buys is not nodes but `
+    + `<b>memory</b>: cut in two, each half is small enough to memorise. The price is the same `
+    + `${dLen.toFixed(1)} moves — which is why serious speedsolvers left pure corners-first behind for `
+    + `methods that use fewer moves and more memorised cases.`;
+
+  const rows = [["A*", IV.astar, ""], ["IDA*", IV.ida, ' class="hl"']];
+  $("idaRows").innerHTML = rows.map(([n, r, cls]) => `<tr${cls}><td>${n}</td>
+    <td class="n">${fmt(Math.round(r.nodes))}</td><td class="n">${r.sec.toFixed(2)} s</td>
+    <td class="n">${fmt(Math.round(r.nps))}</td><td class="n">${usPer(r).toFixed(0)} µs</td></tr>`).join("");
+  $("idaCap").innerHTML =
+    `打亂 ${IV.depth} 步、${IV.n} 顆、同一個 heuristic。兩者展開的節點數幾乎一樣，`
+    + `但每個節點的成本差了 <strong>${SPEED.toFixed(1)} 倍</strong>。`
+    + `這一輪最深的那批局面一顆要展開一千八百萬個節點——用 A* 要跑一小時以上，IDA* 是四分半。`;
+  $("idaCapE").innerHTML =
+    `${IV.n} cubes scrambled ${IV.depth} moves, identical heuristic. Both expand about the same number of `
+    + `nodes; the cost per node differs by <strong>${SPEED.toFixed(1)}×</strong>. `
+    + `The deepest cubes in this study expand eighteen million nodes each — over an hour under A*, `
+    + `four and a half minutes under IDA*.`;
+
+  drawPdb(); drawErr(); drawSqueeze();
+}
+
+function fit(c) {
+  const r = window.devicePixelRatio || 1, w = c.clientWidth || c.width;
+  const h = Math.round((w * c.height) / c.width);
+  c.width = Math.round(w * r); c.height = Math.round(h * r); c.style.height = h + "px";
+  const x = c.getContext("2d"); x.setTransform(r, 0, 0, r, 0, 0); x.clearRect(0, 0, w, h);
+  return [x, w, h];
+}
+
+function drawPdb() {
+  const c = $("cPdb"); c.width = 900; c.height = 330;
+  const [x, W, H] = fit(c);
+  const hist = P.hist, max = Math.max(...hist);
+  const L = 52, R = 12, Tp = 14, B = 40, bw = (W - L - R) / hist.length;
+  x.font = '11px "IBM Plex Mono", monospace';
+  x.strokeStyle = css("--line-soft");
+  for (let g = 0; g <= 4; g++) {
+    const y = Tp + ((H - Tp - B) * g) / 4;
+    x.beginPath(); x.moveTo(L, y + .5); x.lineTo(W - R, y + .5); x.stroke();
+    x.fillStyle = css("--faint"); x.textAlign = "right";
+    x.fillText((max * (4 - g) / 4 / 1e6).toFixed(0) + "M", L - 8, y + 4);
+  }
+  hist.forEach((v, d) => {
+    const h = ((H - Tp - B) * v) / max;
+    x.fillStyle = css("--truth"); x.globalAlpha = d >= 10 && d <= 12 ? 1 : .5;
+    x.fillRect(L + d * bw + 2, H - B - h, bw - 4, h);
+    x.globalAlpha = 1;
+    x.fillStyle = d === P.max ? css("--ink") : css("--faint"); x.textAlign = "center";
+    x.fillText(String(d), L + d * bw + bw / 2, H - B + 17);
+  });
+  x.fillStyle = css("--muted"); x.textAlign = "center";
+  x.font = '12px "Noto Sans TC", system-ui, sans-serif';
+  x.fillText(T("只把角塊轉回去要幾步", "moves to restore the corners alone"), W / 2, H - 8);
+}
+
+function drawErr() {
+  const c = $("cErr2"); c.width = 900; c.height = 420;
+  const [x, W, H] = fit(c);
+  const net = E2.by_true_net, pdb = E2.by_true_pdb;
+  const maxD = Math.max(...net.map((r) => r.d)) + 1;
+  const L = 46, R = 14, Tp = 14, B = 44;
+  const px = (d) => L + ((W - L - R) * d) / maxD;
+  const py = (v) => H - B - ((H - Tp - B) * v) / maxD;
+  x.font = '11px "IBM Plex Mono", monospace';
+  x.strokeStyle = css("--line-soft");
+  for (let g = 0; g <= maxD; g += 2) {
+    x.beginPath(); x.moveTo(px(g) + .5, Tp); x.lineTo(px(g) + .5, H - B); x.stroke();
+    x.beginPath(); x.moveTo(L, py(g) + .5); x.lineTo(W - R, py(g) + .5); x.stroke();
+    x.fillStyle = css("--faint");
+    x.textAlign = "center"; x.fillText(String(g), px(g), H - B + 17);
+    x.textAlign = "right"; x.fillText(String(g), L - 8, py(g) + 4);
+  }
+  x.strokeStyle = css("--truth"); x.lineWidth = 1.5; x.setLineDash([6, 5]);
+  x.beginPath(); x.moveTo(px(0), py(0)); x.lineTo(px(maxD), py(maxD)); x.stroke();
+  x.setLineDash([]);
+
+  x.fillStyle = css("--estimate-w"); x.beginPath();
+  net.forEach((r, i) => (i ? x.lineTo(px(r.d), py(r.mean + r.std)) : x.moveTo(px(r.d), py(r.mean + r.std))));
+  for (let i = net.length - 1; i >= 0; i--) x.lineTo(px(net[i].d), py(net[i].mean - net[i].std));
+  x.closePath(); x.fill();
+
+  const line = (rows, color, w) => {
+    x.strokeStyle = color; x.lineWidth = w; x.beginPath();
+    rows.forEach((r, i) => (i ? x.lineTo(px(r.d), py(r.mean)) : x.moveTo(px(r.d), py(r.mean))));
+    x.stroke();
+    rows.forEach((r) => { x.fillStyle = color; x.beginPath(); x.arc(px(r.d), py(r.mean), 3, 0, 7); x.fill(); });
+  };
+  line(pdb, css("--muted"), 1.8);
+  line(net, css("--estimate"), 2.5);
+
+  x.fillStyle = css("--muted"); x.textAlign = "center";
+  x.font = '12px "Noto Sans TC", system-ui, sans-serif';
+  x.fillText(T("真正的最短解（用角塊表證明出來的）", "true optimum, proved with the corner table"), (L + W - R) / 2, H - 8);
+  x.save(); x.translate(13, (Tp + H - B) / 2); x.rotate(-Math.PI / 2);
+  x.fillText(T("估計值", "estimate"), 0, 0); x.restore();
+}
+
+function drawSqueeze() {
+  const t = $("sqTrack"), max = 30;
+  const p = (v) => `${Math.max(0, Math.min(100, (v / max) * 100))}%`;
+  const lo = E3.mean_lower, hi = E3.mean_found;
+  t.innerHTML =
+    `<div class="sq-band" style="left:${p(lo)};width:${((hi - lo) / max) * 100}%"></div>`
+    + `<div class="sq-mark" style="left:${p(lo)};background:var(--muted)"></div>`
+    + `<div class="sq-mark" style="left:${p(hi)};background:var(--estimate)"></div>`
+    + `<div class="sq-lab" style="left:${p(lo)};top:0;transform:translateX(-50%)">${T("下界", "lower")} ${lo.toFixed(1)}</div>`
+    + `<div class="sq-lab" style="left:${p(hi)};top:0;transform:translateX(-50%)">${T("找到的解", "found")} ${hi.toFixed(1)}</div>`
+    + `<div class="sq-lab" style="left:${p((lo + hi) / 2)};top:52px;transform:translateX(-50%);color:var(--ink)">`
+    + `${T("最短解在這中間", "the optimum is in here")}</div>`
+    + `<div class="sq-lab" style="left:0;top:52px;color:var(--faint)">0</div>`
+    + `<div class="sq-lab" style="right:0;top:52px;color:var(--faint)">${max}</div>`;
+}
+
+setLang("zh");
+window.addEventListener("resize", () => { drawPdb(); drawErr(); });
+</script>

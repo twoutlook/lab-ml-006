@@ -41,21 +41,47 @@ def heuristic(net, states: np.ndarray, device, chunk: int = 200000) -> np.ndarra
 
 
 def bwas(cube: Cube, net, state: np.ndarray, device,
-         weight: float = 0.6, batch: int = 200, max_nodes: int = 200000):
-    """解一個局面。回傳 (動作序列 or None, 展開了幾個節點)。"""
-    net.eval()
+         weight: float = 0.6, batch: int = 200, max_nodes: int = 200000,
+         goal_at_pop: bool = False, goal=None):
+    """解一個局面。回傳 (動作序列 or None, 展開了幾個節點)。
+
+    `net` 可以是 PyTorch 模型，也可以是 ml/heuristics.py 裡任何一個 Heuristic
+    （角塊距離表、取大的組合…）。兩者都吃 (N,S) 回 (N,)，所以搜尋本身不必知道差別。
+
+    goal：自訂「什麼算走到了」。吃 (N,S) 回 (N,) 的布林陣列。
+    預設是「整顆方塊解開」，但換成「角塊全部歸位」就變成人類的第一階段——
+    這是 ml/goal2.py 拿來做分階段解法的入口。
+
+    goal_at_pop：終點在「節點被展開時」才判定，而不是「子節點被產生時」。
+    課本 A* 是前者，而且**最短解保證只在前者成立**。這個專案原本用後者
+    （比較省節點，而且在 2x2x2 上實測兩者結果完全一樣，見下面的說明）；
+    但要拿 admissible 的角塊表去證明最短解，就必須切回課本版本。
+    """
+    h = net if callable(net) and not hasattr(net, "eval") else None
+    if h is None:
+        from heuristics import NetHeuristic
+        h = NetHeuristic(net, device)
     S = cube.n_stickers
+    reached = goal if goal is not None else cube.is_solved
     start = state.reshape(1, S)
-    if cube.is_solved(start)[0]:
+    if reached(start)[0]:
         return [], 0
 
     k0 = start[0].tobytes()
     g = {k0: 0}                     # 目前找到的最短「已走步數」
     parent = {k0: (None, -1)}       # 走到這個局面的上一個局面與動作
-    h0 = float(heuristic(net, start, device)[0])
+    h0 = float(h(start)[0])
     heap = [(weight * 0 + h0, 0, k0)]
     counter = 0
     expanded = 0
+
+    def path_from(k, extra=None):
+        seq = [] if extra is None else [extra]
+        while parent[k][0] is not None:
+            pk, pm = parent[k]
+            seq.append(pm)
+            k = pk
+        return seq[::-1]
 
     while heap and expanded < max_nodes:
         # ── 一次抓 batch 個最好的節點 ──
@@ -73,10 +99,15 @@ def bwas(cube: Cube, net, state: np.ndarray, device,
         cur = np.frombuffer(b"".join(k for _, k in pop), dtype=np.uint8).reshape(len(pop), S)
         gs = np.array([gg for gg, _ in pop], dtype=np.int64)
 
+        if goal_at_pop:
+            done = reached(cur)
+            if done.any():
+                return path_from(pop[int(np.flatnonzero(done)[0])][1]), expanded
+
         kids = cube.expand(cur)                       # (B, A, S)
         B, A, _ = kids.shape
         flat = np.ascontiguousarray(kids.reshape(-1, S))
-        solved = cube.is_solved(flat)
+        solved = reached(flat)
 
         # ── 有子節點就是答案，直接回頭串路徑 ──
         # 注意：這是「產生時就判定終點」，不是課本 A* 的「等它被展開才判定」。
@@ -85,18 +116,12 @@ def bwas(cube: Cube, net, state: np.ndarray, device,
         # 而且失敗的是同樣那 4 個局面。也就是說這裡的非最短解跟判定時機無關，
         # 純粹是 heuristic 高估造成的（benchmark 量到 23.2% 的局面被高估）。
         # 既然結果一樣，就用比較省節點的那個寫法。
-        if solved.any():
+        if solved.any() and not goal_at_pop:
             j = int(np.flatnonzero(solved)[0])
             bi, ai = divmod(j, A)
-            path = [ai]
-            k = pop[bi][1]
-            while parent[k][0] is not None:
-                pk, pm = parent[k]
-                path.append(pm)
-                k = pk
-            return path[::-1], expanded
+            return path_from(pop[bi][1], ai), expanded
 
-        hv = heuristic(net, flat, device)
+        hv = h(flat)
         gk = np.repeat(gs, A) + 1
         fv = weight * gk + hv
 
@@ -114,7 +139,10 @@ def bwas(cube: Cube, net, state: np.ndarray, device,
 
 def greedy(cube: Cube, net, states: np.ndarray, device, budget: int):
     """完全不搜尋：每一步都挑 h 最小的子節點。用來看「沒有搜尋的話網路夠不夠強」。"""
-    net.eval()
+    h = net if callable(net) and not hasattr(net, "eval") else None
+    if h is None:
+        from heuristics import NetHeuristic
+        h = NetHeuristic(net, device)
     cur = states.copy()
     n, S = cur.shape
     done = cube.is_solved(cur)
@@ -126,7 +154,7 @@ def greedy(cube: Cube, net, states: np.ndarray, device, budget: int):
         kids = cube.expand(cur[live])
         L, A, _ = kids.shape
         flat = np.ascontiguousarray(kids.reshape(-1, S))
-        hv = heuristic(net, flat, device).reshape(L, A)
+        hv = h(flat).reshape(L, A)
         hv[cube.is_solved(flat).reshape(L, A)] = -1e9
         pick = hv.argmin(axis=1)
         cur[live] = kids[np.arange(L), pick]
