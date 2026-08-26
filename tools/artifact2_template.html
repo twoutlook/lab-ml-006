@@ -94,6 +94,21 @@
       </div>
     </div>
     <p class="cap zh">
+      <strong>任何一顆都解得開，而且保證是最短的。</strong>角塊的上帝之數是 14，
+      所以雙向 BFS 兩邊各走 7 步一定相遇——沒有「解不出來」的情況。
+      實測 312 個局面（含 6 顆距離剛好 14 的，那是理論上的最壞情況，
+      八千八百萬個角塊狀態裡只有 6,624 個），<strong>312/312 跟 Python 那張 88 MB 的表完全相同</strong>。
+      耗時隨距離上升：距離 9 約 8 毫秒、距離 12 約 28 毫秒、距離 14 約 100 毫秒——
+      那就是上限，不會再更久。
+    </p>
+    <p class="cap en">
+      <strong>Any cube, and provably minimal.</strong> God's number for the corners is 14, so a
+      bidirectional search meeting at 7 and 7 always finds it — there is no "cannot solve" case.
+      Checked on 312 states, including six at distance exactly 14 (the theoretical worst case, 6,624 of the
+      88 million corner states): <strong>312/312 identical to the 88 MB table computed in Python</strong>.
+      Time grows with distance — about 8 ms at distance 9, 28 ms at 12, 100 ms at 14, which is the ceiling.
+    </p>
+    <p class="cap zh">
       「整顆還要幾步」這一格是空的，因為那需要學出來的網路，而它有 297 萬個參數、
       匯出成 22 MB，塞不進這一頁。角塊那一格填得出來，是因為它<strong>不必搬表</strong>——
       瀏覽器現場跑一次雙向 BFS 就算得出來，典型 10 毫秒。原理在下面那一節。
@@ -859,7 +874,13 @@ $("bCorner").onclick = () => {
   const t0 = performance.now();
   const r = SOLVER.solve(SOLVER.index(state));
   const ms = performance.now() - t0;
-  if (!r) { $("status").textContent = T("算不出來（不該發生）", "no solution (should not happen)"); return; }
+  if (!r) {
+    $("status").textContent = SOLVER.oom
+      ? T("這台裝置配置不出那 88 MB 的造訪紀錄，所以算不了。桌機瀏覽器通常沒問題。",
+          "This device could not allocate the 88 MB visited array, so the search cannot run. Desktop browsers normally can.")
+      : T("算不出來（不該發生）", "no solution (should not happen)");
+    return;
+  }
   if (!r.seq.length) { $("status").textContent = T("角塊已經歸位了", "corners are already solved"); return; }
   dimEdges = true; wholeTrace = null;
   r.seq.forEach((m) => queue.push(m));

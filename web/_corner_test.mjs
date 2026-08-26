@@ -14,10 +14,15 @@ const cases = JSON.parse(readFileSync(path.join(HERE, "_corner_cases.json"), "ut
 const cube = new Cube(moves["3"]);
 const sv = new CornerSolver(spec);
 
-let bad = 0, t0 = Date.now(), worst = 0, nodes = 0;
+let bad = 0, worst = 0, nodes = 0;
+const byDist = new Map();   // 每個距離各自統計耗時，看最壞情況多久
 for (const [i, c] of cases.entries()) {
   const st = Uint8Array.from(c.state);
+  const t1 = performance.now();
   const r = sv.solve(sv.index(st));
+  const dt = performance.now() - t1;
+  const b = byDist.get(c.dist) || { n: 0, ms: 0, nodes: 0 };
+  b.n++; b.ms += dt; b.nodes += r ? r.expanded : 0; byDist.set(c.dist, b);
   if (!r) { console.error(`#${i} 找不到解`); bad++; continue; }
   if (r.dist !== c.dist) { console.error(`#${i} 距離不符：JS ${r.dist} vs Python ${c.dist}`); bad++; }
   let cur = st;
@@ -25,7 +30,12 @@ for (const [i, c] of cases.entries()) {
   if (sv.index(cur) !== sv.solved) { console.error(`#${i} 回傳的解沒把角塊轉回去`); bad++; }
   worst = Math.max(worst, r.dist); nodes += r.expanded;
 }
-const ms = (Date.now() - t0) / cases.length;
 console.log(`角塊距離對帳：${cases.length - bad}/${cases.length} 與 Python 的表完全相同`);
-console.log(`  最遠 ${worst} 步 · 平均展開 ${Math.round(nodes / cases.length).toLocaleString()} 個狀態 · ${ms.toFixed(0)} ms/題`);
+console.log(`  最遠 ${worst} 步（角塊的上帝之數就是 14）`);
+console.log(`
+  距離   題數      平均展開狀態      平均耗時`);
+for (const d of [...byDist.keys()].sort((a, b2) => a - b2)) {
+  const b = byDist.get(d);
+  console.log(`  ${String(d).padStart(4)} ${String(b.n).padStart(6)} ${Math.round(b.nodes / b.n).toLocaleString().padStart(16)} ${(b.ms / b.n).toFixed(0).padStart(10)} ms`);
+}
 process.exit(bad ? 1 : 0);

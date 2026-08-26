@@ -83,8 +83,16 @@ export class CornerSolver {
   solve(startIdx, onProgress) {
     // 已經解開就直接回，別為了這個配置 88 MB（頁面一載入就會問一次）
     if (startIdx === this.solved) return { dist: 0, seq: [], expanded: 0 };
-    if (!this.seen) this.seen = new Uint8Array(this.nStates);
-    else this.seen.fill(0);
+    if (!this.seen) {
+      // 88 MB 的造訪紀錄。桌機沒問題，但記憶體吃緊的裝置可能配置不出來——
+      // 接住它，讓呼叫端顯示訊息，不要讓按鈕默默沒反應。
+      try {
+        this.seen = new Uint8Array(this.nStates);
+      } catch (e) {
+        this.oom = true;
+        return null;
+      }
+    } else this.seen.fill(0);
     const seen = this.seen, A = this.A;
 
     seen[startIdx] = 1;                       // fwd 深度 0（存的是深度 + 1）
