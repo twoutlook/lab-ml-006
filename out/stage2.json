@@ -1,0 +1,257 @@
+{
+ "exact": [
+  {
+   "depth": 8,
+   "optimal": 8,
+   "stage1": 8,
+   "stage2": 10,
+   "total": 18,
+   "detour": 10,
+   "nodes": 842,
+   "secs": 0.030553817749023438
+  },
+  {
+   "depth": 8,
+   "optimal": 8,
+   "stage1": 6,
+   "stage2": 12,
+   "total": 18,
+   "detour": 10,
+   "nodes": 15078,
+   "secs": 0.40569090843200684
+  },
+  {
+   "depth": 8,
+   "optimal": 8,
+   "stage1": 6,
+   "stage2": 12,
+   "total": 18,
+   "detour": 10,
+   "nodes": 5151,
+   "secs": 0.1309206485748291
+  },
+  {
+   "depth": 8,
+   "optimal": 8,
+   "stage1": 6,
+   "stage2": 10,
+   "total": 16,
+   "detour": 8,
+   "nodes": 17,
+   "secs": 0.0011899471282958984
+  },
+  {
+   "depth": 8,
+   "optimal": 8,
+   "stage1": 6,
+   "stage2": 14,
+   "total": 20,
+   "detour": 12,
+   "nodes": 119033,
+   "secs": 3.020414352416992
+  },
+  {
+   "depth": 8,
+   "optimal": 8,
+   "stage1": 6,
+   "stage2": 14,
+   "total": 20,
+   "detour": 12,
+   "nodes": 302365,
+   "secs": 7.518795013427734
+  },
+  {
+   "depth": 9,
+   "optimal": 9,
+   "stage1": 9,
+   "stage2": 6,
+   "total": 15,
+   "detour": 6,
+   "nodes": 6,
+   "secs": 0.0008866786956787109
+  },
+  {
+   "depth": 9,
+   "optimal": 9,
+   "stage1": 5,
+   "stage2": 12,
+   "total": 17,
+   "detour": 8,
+   "nodes": 2836,
+   "secs": 0.0721120834350586
+  },
+  {
+   "depth": 9,
+   "optimal": 9,
+   "stage1": 7,
+   "stage2": 12,
+   "total": 19,
+   "detour": 10,
+   "nodes": 5637,
+   "secs": 0.14062237739562988
+  },
+  {
+   "depth": 9,
+   "optimal": 9,
+   "stage1": 7,
+   "stage2": 14,
+   "total": 21,
+   "detour": 12,
+   "nodes": 121797,
+   "secs": 3.0405423641204834
+  },
+  {
+   "depth": 9,
+   "optimal": 7,
+   "stage1": 5,
+   "stage2": 12,
+   "total": 17,
+   "detour": 10,
+   "nodes": 511,
+   "secs": 0.01282358169555664
+  },
+  {
+   "depth": 9,
+   "optimal": 9,
+   "stage1": 7,
+   "stage2": 12,
+   "total": 19,
+   "detour": 10,
+   "nodes": 752,
+   "secs": 0.02046942710876465
+  },
+  {
+   "depth": 10,
+   "optimal": 10,
+   "stage1": 6,
+   "stage2": 16,
+   "total": 22,
+   "detour": 12,
+   "nodes": 10620409,
+   "secs": 269.71895837783813
+  },
+  {
+   "depth": 10,
+   "optimal": 8,
+   "stage1": 4,
+   "stage2": 10,
+   "total": 14,
+   "detour": 6,
+   "nodes": 155,
+   "secs": 0.004750251770019531
+  },
+  {
+   "depth": 10,
+   "optimal": 10,
+   "stage1": 8,
+   "stage2": null,
+   "nodes": 12124160,
+   "secs": 301.42209219932556
+  },
+  {
+   "depth": 10,
+   "optimal": 10,
+   "stage1": 8,
+   "stage2": null,
+   "nodes": 12058624,
+   "secs": 301.43350291252136
+  },
+  {
+   "depth": 10,
+   "optimal": 10,
+   "stage1": 10,
+   "stage2": null,
+   "nodes": 11927552,
+   "secs": 300.2399489879608
+  },
+  {
+   "depth": 10,
+   "optimal": 10,
+   "stage1": 8,
+   "stage2": null,
+   "nodes": 12058624,
+   "secs": 300.59750986099243
+  }
+ ],
+ "detour": [
+  {
+   "depth": 8,
+   "cubes": 24,
+   "optimal": 7.75,
+   "stage1": 6.666666666666667,
+   "stage2_lower": 7.583333492279053,
+   "cf_lower": 14.25,
+   "detour": 6.5
+  },
+  {
+   "depth": 10,
+   "cubes": 24,
+   "optimal": 9.166666666666666,
+   "stage1": 6.916666666666667,
+   "stage2_lower": 8.666666984558105,
+   "cf_lower": 15.583333333333334,
+   "detour": 6.416666666666667
+  },
+  {
+   "depth": 11,
+   "cubes": 24,
+   "optimal": 10.083333333333334,
+   "stage1": 8.333333333333334,
+   "stage2_lower": 8.75,
+   "cf_lower": 17.083333333333332,
+   "detour": 7.0
+  },
+  {
+   "depth": 12,
+   "cubes": 24,
+   "optimal": 11.5,
+   "stage1": 8.916666666666666,
+   "stage2_lower": 9.166666984558105,
+   "cf_lower": 18.083333333333332,
+   "detour": 6.583333333333333
+  },
+  {
+   "depth": 13,
+   "cubes": 24,
+   "optimal": 12.25,
+   "stage1": 8.833333333333334,
+   "stage2_lower": 9.166666984558105,
+   "cf_lower": 18.0,
+   "detour": 5.75
+  }
+ ],
+ "deep": [
+  {
+   "depth": 18,
+   "stage1": 10.019,
+   "stage2_lower": 9.116000175476074,
+   "cf_lower": 19.135
+  },
+  {
+   "depth": 25,
+   "stage1": 10.4835,
+   "stage2_lower": 9.146499633789062,
+   "cf_lower": 19.63
+  },
+  {
+   "depth": 30,
+   "stage1": 10.6715,
+   "stage2_lower": 9.156999588012695,
+   "cf_lower": 19.8285
+  }
+ ],
+ "heuristic": {
+  "before": {
+   "corners": 10.62600040435791,
+   "edges0": 8.748000144958496,
+   "edges1": 8.784500122070312,
+   "max3": 10.741250038146973
+  },
+  "after": {
+   "corners": 0.0,
+   "edges0": 8.737250328063965,
+   "edges1": 8.763999938964844,
+   "max3": 9.150750160217285
+  }
+ }
+}

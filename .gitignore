@@ -16,6 +16,13 @@ ml/checkpoints/goal2-*.json
 ml/checkpoints/dist222.npz
 ml/checkpoints/corners3.npy
 
+# 兩張六條邊的表（各 43 MB，python ml/edges.py 花 70 秒）。同理不進版控。
+# 但 edges-build.json（建表統計）要進——圖文版與 README 讀它。
+ml/checkpoints/edges3_*.npy
+
+# goal3 的分段快取，同 goal2。彙總後的 out/goal3.json 才是要留的。
+ml/checkpoints/goal3-*.json
+
 # 網頁要用的權重。兩份都進版控：checkpoint 本身沒進版控，
 # 所以不放這個的話，clone 下來的人得先訓練 2.5 小時才看得到 3x3x3 那一頁。
 # （2x2x2 3.5 MB、3x3x3 22 MB。4 位小數是必要的——3 位的誤差 0.048 步，太大。）
@@ -31,3 +38,5 @@ out/*
 !out/youtube.json
 !out/youtube2.json
 !out/artifact1.json
+!out/goal3.json
+!out/stage2.json

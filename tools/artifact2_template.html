@@ -36,13 +36,15 @@
   <p class="lede zh">
     1974 年 Ernő Rubik 第一次解開他自己發明的方塊，用的是先解角。人類這樣解是為了好記。
     但同一個拆法在機器那邊有完全不同的用途——<strong>它是一把量尺。</strong>
-    有了它，上一篇說「量不出來」的東西，這一篇量出來了。
+    有了它，上一篇說「量不出來」的東西，這一篇量出來了——
+    包括一件反直覺的事：<strong>同樣先解角，對人是省事，對機器是繞路</strong>，而且繞多遠算得出來。
   </p>
   <p class="lede en">
     When Ernő Rubik first solved his own cube in 1974, he solved the corners first. People do it that way
     because it is easier to remember. The same decomposition has an entirely different use on the machine
     side — <strong>it is a ruler.</strong> With it, the thing the previous piece called unmeasurable
-    becomes measurable.
+    becomes measurable — including something counter-intuitive: <strong>the same decomposition that saves
+    a person effort costs a machine moves</strong>, and now we can say exactly how many.
   </p>
   <div class="stats" id="heroStats"></div>
 </header>
@@ -522,45 +524,267 @@
   </div>
 </section>
 
+<!-- ═══ 兩個階段，不是三個 ═══ -->
+<section>
+  <div class="gauge"><div class="tick">
+    <div class="k" style="font-size:20px"><span class="zh">兩個</span><span class="en">two</span></div>
+    <div class="kl zh">3×3×3 只有兩種要解的東西：<br>八顆角、十二條邊。中心是釘死的。</div>
+    <div class="kl en">A 3×3×3 has only two kinds of piece to solve: eight corners, twelve edges. The centres are nailed down.</div>
+  </div></div>
+  <div class="body">
+    <h2 class="zh">中心塊沒有「解」這回事</h2>
+    <h2 class="en">There is no centre stage</h2>
+    <p class="zh">
+      先把一個很容易誤會的地方講清楚。人在手上轉方塊的時候會整顆翻來翻去，中心當然會動——
+      但那不改變方塊的狀態，只是換個握法。這一頁的動作集只有六個面的順逆時針共十二種轉法，
+      在這個座標系下，<strong>五十四片貼紙裡有六片永遠不動</strong>，正好是六個面的正中央。
+      引擎驗過：五千個隨機打亂的局面，中心顏色永遠是同一組。
+    </p>
+    <p class="en">
+      One thing is easy to get wrong. A person rotates the whole cube constantly while solving, so the
+      centres do move in the room — but that changes nothing about the cube's state; it is just a
+      re-grip. The move set on this page is the twelve quarter-turns of the six faces, and in that frame
+      <strong>six of the fifty-four stickers never move</strong> — exactly the six face centres. Verified
+      against the engine: over five thousand random scrambles the centre colours are always the same set.
+    </p>
+    <p class="zh">
+      所以 3×3×3 只有<strong>兩個階段</strong>：角、邊。（要到 4×4×4 以上，中心才會動、才需要解。）
+      那 Korf 為什麼有三張表？因為十二條邊一起有 12! × 2¹¹ ≈ 9,810 億個狀態，數不完；
+      切成兩半、每半六條，就只剩 12P6 × 2⁶ = 42,577,920 個——<strong>比角塊那張還小一半</strong>。
+      第三張表不是第三個階段，是同一個階段被切開來實作。
+    </p>
+    <p class="en">
+      So a 3×3×3 has exactly <strong>two stages</strong>: corners, then edges. (Centres only start moving
+      on 4×4×4 and up.) Why does Korf use three tables, then? Because twelve edges together come to
+      12! × 2¹¹ ≈ 981 billion states — too many to enumerate. Split into halves of six, each is
+      12P6 × 2⁶ = 42,577,920 — <strong>half the size of the corner table</strong>. The third table is not
+      a third stage; it is one stage cut in two to make it fit.
+    </p>
+    <div class="scroller"><table>
+      <thead><tr>
+        <th><span class="zh">表</span><span class="en">table</span></th>
+        <th><span class="zh">看的是</span><span class="en">covers</span></th>
+        <th><span class="zh">狀態數</span><span class="en">states</span></th>
+        <th><span class="zh">最遠</span><span class="en">deepest</span></th>
+        <th><span class="zh">平均</span><span class="en">mean</span></th>
+      </tr></thead>
+      <tbody id="tblRows"></tbody>
+    </table></div>
+    <p class="cap zh">
+      三張都是<strong>下界</strong>：解開整顆方塊的每一步，也都在轉這些塊。
+      三個下界取最大，仍然是下界——所以最短解的保證還在。
+    </p>
+    <p class="cap en">
+      All three are <strong>lower bounds</strong>: every move that solves the whole cube also moves these
+      pieces. The maximum of three lower bounds is still a lower bound, so the optimality guarantee survives.
+    </p>
+  </div>
+</section>
+
+<!-- ═══ 0.11 步 ═══ -->
+<section>
+  <div class="gauge"><div class="tick">
+    <div class="k" id="gEdgeSpeed">–</div>
+    <div class="kl zh">補上兩張邊塊表之後<br>IDA* 少展開的節點倍數（打亂 12 步）</div>
+    <div class="kl en">Fewer nodes for IDA* once the two edge tables are added (12-move scrambles)</div>
+  </div></div>
+  <div class="body">
+    <h2 class="zh">平均只推高 0.11 步，搜尋卻快了三個數量級</h2>
+    <h2 class="en">The bound rose by 0.11. The search got a thousand times cheaper.</h2>
+    <p class="zh">
+      補上兩張邊塊表之後，第一個看到的數字是失望的：下界的平均值從
+      <b class="tru" id="nLoC">–</b> 只推到 <b class="tru" id="nLoM">–</b>。
+      原因很清楚——每張六條邊的表平均只有 <span id="nLoE">–</span>，<strong>比角塊那張還低</strong>，
+      取大的時候有 <b id="nWin">–</b> 的局面根本輪不到它們說話。
+    </p>
+    <p class="en">
+      The first number after adding the edge tables is a disappointment: the mean lower bound moves from
+      <b class="tru" id="nLoCE">–</b> to only <b class="tru" id="nLoME">–</b>. The reason is plain — each
+      six-edge table averages <span id="nLoEE">–</span>, <strong>below the corner table</strong>, so on
+      <b id="nWinE">–</b> of positions the maximum is still just the corner value.
+    </p>
+    <p class="zh">
+      然後去量搜尋，數字整個翻過來。IDA* 要展開的節點數大約是
+      <strong>（真正的距離 − 下界）的指數</strong>，所以指數上少 0.11，底下就是好幾個數量級。
+      同一批方塊、同一支求解器，只換 heuristic：
+    </p>
+    <p class="en">
+      Then measure the search, and the picture inverts. The number of nodes IDA* expands is roughly
+      <strong>exponential in (true distance − lower bound)</strong>, so 0.11 off the exponent is orders of
+      magnitude off the count. Same cubes, same solver, only the heuristic swapped:
+    </p>
+    <canvas id="cNodes" width="900" height="380"></canvas>
+    <div class="scroller"><table>
+      <thead><tr>
+        <th><span class="zh">打亂</span><span class="en">scramble</span></th>
+        <th><span class="zh">最短解</span><span class="en">optimal</span></th>
+        <th><span class="zh">角塊表・節點</span><span class="en">corner table · nodes</span></th>
+        <th><span class="zh">角塊表・秒</span><span class="en">corner table · s</span></th>
+        <th><span class="zh">三張表・節點</span><span class="en">three tables · nodes</span></th>
+        <th><span class="zh">三張表・秒</span><span class="en">three tables · s</span></th>
+        <th><span class="zh">省幾倍</span><span class="en">ratio</span></th>
+      </tr></thead>
+      <tbody id="nodeRows"></tbody>
+    </table></div>
+    <div class="callout">
+      <h3 class="zh">平均值是這裡最沒用的統計量</h3>
+      <h3 class="en">The mean was the least useful statistic here</h3>
+      <p class="zh" id="speedText"></p>
+      <p class="en" id="speedTextE"></p>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ 先解角的代價 ═══ -->
+<section>
+  <div class="gauge"><div class="tick">
+    <div class="k" id="gDetour">–</div>
+    <div class="kl zh">先解角之後，總步數<br>比最短解多出來的（精確值）</div>
+    <div class="kl en">Extra moves that solving corners first actually costs (exact)</div>
+  </div></div>
+  <div class="body">
+    <h2 class="zh">人先解角是對的，機器先解角是錯的</h2>
+    <h2 class="en">Corners first is right for a person and wrong for a machine</h2>
+    <p class="zh">
+      現在有工具可以問一個一直問不了的問題：<strong>先解角，到底繞了多遠？</strong>
+      兩個階段都求到最短——第一階段沿著角塊精確表走（站在距離 d 的地方一定有鄰居是 d−1，
+      沿著走下去就是一條最短解，連搜尋都不用），第二階段用三張表跑 IDA*。
+      再跟直接求出的最短解一比，繞路就是<strong>精確值</strong>，不是估計。
+    </p>
+    <p class="en">
+      Now a question that could not be asked before: <strong>how far does corners-first detour?</strong>
+      Both stages are solved to the minimum — stage one walks the exact corner table (from a position at
+      distance d there is always a neighbour at d−1, so following those traces a shortest path with no
+      search at all), stage two runs IDA* on all three tables. Compare that against the direct optimum and
+      the detour is an <strong>exact number</strong>, not an estimate.
+    </p>
+    <div class="scroller"><table>
+      <thead><tr>
+        <th><span class="zh">打亂</span><span class="en">scramble</span></th>
+        <th><span class="zh">直接最短解</span><span class="en">optimal</span></th>
+        <th><span class="zh">階段 1・角</span><span class="en">stage 1 · corners</span></th>
+        <th><span class="zh">階段 2・剩下的</span><span class="en">stage 2 · the rest</span></th>
+        <th><span class="zh">合計</span><span class="en">total</span></th>
+        <th><span class="zh">繞路</span><span class="en">detour</span></th>
+        <th><span class="zh">階段 2 花的秒數</span><span class="en">stage 2 seconds</span></th>
+      </tr></thead>
+      <tbody id="exactRows"></tbody>
+    </table></div>
+    <p class="cap zh">
+      每一列都是一顆真的方塊，兩個階段都可證明最短。注意第三欄——
+      <strong>把角轉回去之後，剩下的部分反而離解開更遠了</strong>。
+      灰掉的那幾列是第二階段在時間上限內沒算完的，一起列出來，
+      不然平均繞路會看起來比實際小。
+    </p>
+    <p class="cap en">
+      Each row is one real cube with both stages provably minimal. Look at the third column: <strong>after
+      the corners go home, what is left is further from solved than the whole cube was to begin with</strong>.
+      The greyed rows are cubes whose stage two did not finish inside the time limit; they are listed too,
+      because dropping them would make the average detour look smaller than it is.
+    </p>
+    <p class="zh">
+      深一點的局面第二階段就求不完了，但下界還是給得出來——而下界已經足夠說明問題：
+    </p>
+    <p class="en">
+      Deeper positions put stage two out of reach, but the lower bound still applies — and the bound alone
+      is already damning:
+    </p>
+    <div class="scroller"><table>
+      <thead><tr>
+        <th><span class="zh">打亂</span><span class="en">scramble</span></th>
+        <th><span class="zh">直接最短解</span><span class="en">optimal</span></th>
+        <th><span class="zh">階段 1（角，最短）</span><span class="en">stage 1 (corners, minimal)</span></th>
+        <th><span class="zh">階段 2 下界</span><span class="en">stage 2 lower bound</span></th>
+        <th><span class="zh">先解角至少</span><span class="en">corners-first, at least</span></th>
+        <th><span class="zh">至少繞路</span><span class="en">detour, at least</span></th>
+      </tr></thead>
+      <tbody id="detourRows"></tbody>
+    </table></div>
+    <p class="cap zh">
+      最後一欄是<strong>有證明的下限</strong>：真正的繞路只會更多，不會更少——
+      上面那張精確的表就是證據。
+    </p>
+    <p class="cap en">
+      The last column is a <strong>proven floor</strong>: the real detour can only be larger — as the exact
+      table above shows.
+    </p>
+    <p class="zh">
+      更有意思的是第二階段為什麼難算。角塊一歸位，角塊表就永遠讀 0——
+      三張表裡最強的那張直接閉嘴，只剩兩張邊塊表在說話：
+    </p>
+    <p class="en">
+      More interesting is <em>why</em> stage two is hard. The moment the corners are home, the corner table
+      reads zero forever. The strongest of the three tables goes silent and only the two edge tables remain:
+    </p>
+    <div class="scroller"><table>
+      <thead><tr>
+        <th></th>
+        <th><span class="zh">角塊表</span><span class="en">corners</span></th>
+        <th><span class="zh">邊表 0</span><span class="en">edges 0</span></th>
+        <th><span class="zh">邊表 1</span><span class="en">edges 1</span></th>
+        <th><span class="zh">取大</span><span class="en">max</span></th>
+      </tr></thead>
+      <tbody id="collapseRows"></tbody>
+    </table></div>
+    <div class="callout">
+      <h3 class="zh">先解角，等於把自己最好的一張表丟掉</h3>
+      <h3 class="en">Solving the corners first throws away your best table</h3>
+      <p class="zh" id="collapseText"></p>
+      <p class="en" id="collapseTextE"></p>
+    </div>
+    <p class="zh">
+      人類為什麼還是先解角？因為人不是在跑 heuristic 搜尋。人用的是背下來的公式——
+      一組「只動我要動的塊、其他都還原」的手順。那是完全不同的資源：
+      <strong>人有記憶，機器有搜尋</strong>，而先解角這個決定，剛好對記憶有利、對搜尋不利。
+    </p>
+    <p class="en">
+      So why do people still solve corners first? Because a person is not running a heuristic search. A
+      person runs memorised algorithms — sequences that move exactly the pieces they want and restore
+      everything else. That is a different resource entirely: <strong>people have memory, machines have
+      search</strong>, and solving corners first happens to help the former and hurt the latter.
+    </p>
+  </div>
+</section>
+
 <!-- ═══ 還缺什麼 ═══ -->
 <section>
   <div class="gauge"><div class="tick">
     <div class="k" style="font-size:20px"><span class="zh">下一步</span><span class="en">next</span></div>
-    <div class="kl zh">Korf 的另外兩張表<br>：六條邊，與另外六條</div>
-    <div class="kl en">Korf's other two tables: six edges, and the other six</div>
+    <div class="kl zh">讓網路去學<br>「表算不出來的那一部分」</div>
+    <div class="kl en">Train the network on what the tables cannot see</div>
   </div></div>
   <div class="body">
-    <h2 class="zh">還缺兩張表</h2>
-    <h2 class="en">Two tables short</h2>
+    <h2 class="zh">還缺什麼</h2>
+    <h2 class="en">What is still missing</h2>
     <p class="zh">
-      這一頁只做了 Korf 三張表裡的第一張。另外兩張是「六條邊」，
-      各有 12P6 × 2⁶ = 42,577,920 個狀態，比角塊那張還小。
-      三張取最大之後下界會明顯變緊，深局面的夾子才夾得住，
-      最短解的可解深度也會往上推。
+      三張表補齊了，可解深度往前推了幾步，但離「隨便一顆都求得出最短解」還很遠——
+      隨機打亂的方塊最短解大約二十步，而三張表的下界平均只有
+      <b class="tru" id="nLoM2">–</b>。中間那十步就是這個問題還沒被解決的部分。
     </p>
     <p class="en">
-      This page builds the first of Korf's three tables. The other two cover six edges each,
-      12P6 × 2⁶ = 42,577,920 states apiece — smaller than the corner table. Taking the maximum of all
-      three tightens the bound substantially, which is what the deep-cube bracket needs, and pushes the
-      depth at which optimal solving stays feasible.
+      All three tables are built and the feasible depth moved up a few moves, but "optimal solution for any
+      cube" is still far off: a random scramble sits around twenty moves from solved, while the three-table
+      bound averages only <b class="tru" id="nLoM2E">–</b>. Those ten moves are the unsolved part.
     </p>
     <p class="zh">
-      而更有意思的一個問題留在那裡沒動：既然精確的表跟學出來的網路各有各的毛病
+      而一個問題留在那裡沒動：既然精確的表跟學出來的網路各有各的毛病
       （一個片面、一個不準），<strong>能不能讓網路去學「表算不出來的那一部分」</strong>？
-      也就是把 max(表, 網路) 換成 表 + 學出來的殘差。那就不是這一頁的範圍了。
+      也就是把 max(表, 網路) 換成 表 + 學出來的殘差。那樣得到的東西不再保證是下界，
+      但這一頁已經量過：不保證下界，換來的是可解深度。那個取捨值不值，是下一篇的事。
     </p>
     <p class="en">
-      A more interesting question is left untouched: since the exact table and the learned network fail in
-      different ways — one is partial, the other inaccurate — <strong>could the network be trained on what
-      the table cannot see</strong>? That is, replace max(table, network) with table plus a learned
-      residual. Out of scope here.
+      One question is left untouched: since the exact tables and the learned network fail in different ways
+      — one is partial, the other inaccurate — <strong>could the network be trained on what the tables
+      cannot see</strong>? That is, replace max(table, network) with table plus a learned residual. The
+      result would no longer be a guaranteed lower bound — but this page already measured that trade:
+      giving up the guarantee buys reachable depth. Whether it is worth it is the next piece.
     </p>
   </div>
 </section>
 
 <div class="foot">
   <div class="links">
-    <a href="https://github.com/twoutlook/lab-ml-006/tree/goal002-corners-first" target="_blank" rel="noopener">GitHub · goal002-corners-first</a>
+    <a href="https://github.com/twoutlook/lab-ml-006/tree/goal003-edges" target="_blank" rel="noopener">GitHub · goal003-edges</a>
     <a href="__ARTIFACT1_URL__" target="_blank" rel="noopener"><span class="zh">上一篇</span><span class="en">Previous piece</span></a>
     <!--YT_START--><a href="__YT_URL__" target="_blank" rel="noopener"><span class="zh">影片</span><span class="en">Video</span></a><!--YT_END-->
   </div>
@@ -747,7 +971,174 @@ function paint() {
     + `The deepest cubes in this study expand eighteen million nodes each — over an hour under A*, `
     + `four and a half minutes under IDA*.`;
 
-  drawPdb(); drawErr(); drawSqueeze();
+  paintEdges();
+  drawPdb(); drawErr(); drawSqueeze(); drawNodes();
+}
+
+// ── 第二階段（邊）─────────────────────────────────────────
+const EB = DATA.edges.bounds, ES = DATA.edges.scale, EBUILD = DATA.edges.build;
+const S2 = DATA.stage2;
+// 打亂 12 步那一列是全篇最有代表性的：兩種下界都跑得完，差距已經三個數量級
+const REF = ES.find((r) => r.corners && r.max3 && r.depth === 12)
+         || ES.filter((r) => r.corners && r.max3).pop();
+// r.ratio 是 goal3.py 算好的：只比兩種下界都跑完的那幾顆，
+// 不然深度 14 那一列會拿 2 顆的平均去比 8 顆的平均
+const RATIO = REF ? REF.ratio : 0;
+
+function paintEdges() {
+  const P3 = DATA.pdb;
+  const tbls = [
+    [T("角塊", "corners"), T("八顆角的位置與方向", "all eight corners, position and twist"),
+     P3.states, P3.max, P3.mean],
+    [T("邊塊 0", "edges 0"), T("十二條邊裡的前六條", "six of the twelve edges"),
+     EBUILD.states, EB.edges0.max, EB.edges0.mean],
+    [T("邊塊 1", "edges 1"), T("另外六條", "the other six"),
+     EBUILD.states, EB.edges1.max, EB.edges1.mean],
+  ];
+  $("tblRows").innerHTML = tbls.map(([n, c, st, mx, mn]) =>
+    `<tr><td>${n}</td><td>${c}</td><td class="n">${fmt(st)}</td>
+     <td class="n">${mx}</td><td class="n">${mn.toFixed(2)}</td></tr>`).join("");
+
+  const edgeMean = ((EB.edges0.mean + EB.edges1.mean) / 2).toFixed(2);
+  const winPct = pct(EB.winner.corners / EB.winner.n, 1);
+  for (const [id, v] of [
+    ["nLoC", EB.corners.mean.toFixed(2)], ["nLoCE", EB.corners.mean.toFixed(2)],
+    ["nLoM", EB.max3.mean.toFixed(2)], ["nLoME", EB.max3.mean.toFixed(2)],
+    ["nLoM2", EB.max3.mean.toFixed(2)], ["nLoM2E", EB.max3.mean.toFixed(2)],
+    ["nLoE", edgeMean], ["nLoEE", edgeMean],
+    ["nWin", winPct], ["nWinE", winPct],
+  ]) $(id).textContent = v;
+
+  $("gEdgeSpeed").textContent = RATIO ? `${fmt(Math.round(RATIO))}×` : "–";
+  const exDet = S2.exact.filter((r) => r.stage2 !== null).map((r) => r.detour);
+  const exMean = exDet.reduce((a, b) => a + b, 0) / Math.max(1, exDet.length);
+  $("gDetour").textContent = exDet.length
+    ? T(`+${exMean.toFixed(1)} 步`, `+${exMean.toFixed(1)} moves`) : "–";
+
+  $("nodeRows").innerHTML = ES.filter((r) => r.max3).map((r) => {
+    const c = r.corners, m = r.max3;
+    const star = c && !c.complete ? "*" : "";
+    return `<tr${r.depth === 12 ? ' class="hl"' : ""}><td class="n">${r.depth}</td>
+      <td class="n">${m.len.toFixed(2)}</td>
+      <td class="n">${c ? fmt(Math.round(c.nodes)) + star : T("跑不完", "did not finish")}</td>
+      <td class="n">${c ? c.secs.toFixed(2) + star : "—"}</td>
+      <td class="n">${fmt(Math.round(m.nodes))}</td>
+      <td class="n">${m.secs.toFixed(2)}</td>
+      <td class="n">${r.ratio ? fmt(Math.round(r.ratio)) + "×" : "—"}</td></tr>`;
+  }).join("");
+
+  const gain = EB.max3.mean - EB.corners.mean;
+  $("speedText").innerHTML =
+    `兩張邊塊表把下界的平均值只推高 <b>${gain.toFixed(2)} 步</b>——`
+    + `${winPct} 的局面根本沒動到。但同一批方塊，IDA* 展開的節點數從 `
+    + `<b>${fmt(Math.round(REF.corners.nodes))}</b> 掉到 <b>${fmt(Math.round(REF.max3.nodes))}</b>，`
+    + `<b>${fmt(Math.round(RATIO))} 倍</b>。`
+    + `<br><br>因為 IDA* 的成本是指數，而下界坐在指數上。`
+    + `一個「平均只好一點點」的 heuristic，在搜尋裡可以是完全不同的量級——`
+    + `這也是為什麼 heuristic 的好壞不該只看平均誤差。`;
+  $("speedTextE").innerHTML =
+    `The two edge tables raise the mean lower bound by just <b>${gain.toFixed(2)} moves</b> — on `
+    + `${winPct} of positions they change nothing at all. Yet on the same cubes the nodes IDA* expands `
+    + `fall from <b>${fmt(Math.round(REF.corners.nodes))}</b> to `
+    + `<b>${fmt(Math.round(REF.max3.nodes))}</b>, a factor of <b>${fmt(Math.round(RATIO))}</b>. `
+    + `<br><br>Because IDA*'s cost is exponential and the bound sits in the exponent. A heuristic that is `
+    + `"only slightly better on average" can be a different order of magnitude inside a search — which is `
+    + `why mean error is the wrong way to judge one.`;
+
+  // 跑不完的那幾顆也要列出來——只列跑得完的，會讓繞路看起來比實際小
+  const EX = S2.exact.filter((r) => r.stage2 !== null);
+  $("exactRows").innerHTML = S2.exact.map((r) => r.stage2 === null
+    ? `<tr style="opacity:.5"><td class="n">${r.depth}</td><td class="n tru">${r.optimal}</td>
+       <td class="n">${r.stage1}</td>
+       <td class="n dim" colspan="3">${T(`${(r.secs / 60).toFixed(0)} 分鐘還沒算完`,
+                                          `still unsolved after ${(r.secs / 60).toFixed(0)} min`)}</td>
+       <td class="n">${r.secs.toFixed(1)}</td></tr>`
+    : `<tr><td class="n">${r.depth}</td><td class="n tru">${r.optimal}</td>
+       <td class="n">${r.stage1}</td><td class="n est">${r.stage2}</td>
+       <td class="n">${r.total}</td><td class="n est">+${r.detour}</td>
+       <td class="n">${r.secs.toFixed(1)}</td></tr>`).join("");
+
+  $("detourRows").innerHTML = S2.detour.map((r) =>
+    `<tr><td class="n">${r.depth}</td><td class="n tru">${r.optimal.toFixed(2)}</td>
+     <td class="n">${r.stage1.toFixed(2)}</td><td class="n">${r.stage2_lower.toFixed(2)}</td>
+     <td class="n">${r.cf_lower.toFixed(2)}</td>
+     <td class="n est">+${r.detour.toFixed(2)}</td></tr>`).join("");
+
+  const H = S2.heuristic;
+  $("collapseRows").innerHTML = [
+    [T("打亂的局面", "scrambled"), H.before], [T("角塊歸位後", "corners solved"), H.after],
+  ].map(([n, r], i) =>
+    `<tr${i ? ' class="hl"' : ""}><td>${n}</td><td class="n">${r.corners.toFixed(2)}</td>
+     <td class="n">${r.edges0.toFixed(2)}</td><td class="n">${r.edges1.toFixed(2)}</td>
+     <td class="n">${r.max3.toFixed(2)}</td></tr>`).join("");
+
+  const drop = H.before.max3 - H.after.max3;
+  const slow = Math.max(...EX.map((r) => r.secs));
+  const nUnfin = S2.exact.length - EX.length;
+  const deepest = Math.max(...S2.exact.map((r) => r.depth));
+  $("collapseText").innerHTML =
+    `角塊歸位之後，下界從 <b>${H.before.max3.toFixed(2)}</b> 掉到 <b>${H.after.max3.toFixed(2)}</b>，`
+    + `少了 <b>${drop.toFixed(2)} 步</b>。而上面那張表剛講過，下界坐在指數上。`
+    + `<br><br>實測的後果：直接求打亂 ${REF.depth} 步的最短解只要 `
+    + `<b>${REF.max3.secs.toFixed(2)} 秒</b>；但先把角解掉，剩下那段最慢的一顆花了 `
+    + `<b>${slow.toFixed(0)} 秒</b>，另外 <b>${nUnfin}</b> 顆到時間上限都還沒算完——`
+    + `而那些全都只是打亂 ${deepest} 步的方塊。`
+    + `<b>先解角讓剩下的部分更難解，不是更好解。</b>`;
+  $("collapseTextE").innerHTML =
+    `With the corners home the bound falls from <b>${H.before.max3.toFixed(2)}</b> to `
+    + `<b>${H.after.max3.toFixed(2)}</b>, a loss of <b>${drop.toFixed(2)} moves</b> — and as the section `
+    + `above showed, the bound sits in the exponent.`
+    + `<br><br>The measured consequence: solving a ${REF.depth}-move scramble optimally takes `
+    + `<b>${REF.max3.secs.toFixed(2)} s</b> directly. After solving the corners first, the slowest `
+    + `remainder took <b>${slow.toFixed(0)} s</b>, and <b>${nUnfin}</b> more never finished inside the `
+    + `limit — all on cubes scrambled only ${deepest} moves. `
+    + `<b>Corners-first makes the remainder harder, not easier.</b>`;
+}
+
+function drawNodes() {
+  const c = $("cNodes"); c.width = 900; c.height = 380;
+  const [x, W, H] = fit(c);
+  const rows = ES.filter((r) => r.max3);
+  const L = 62, R = 118, Tp = 18, B = 46;
+  const ds = rows.map((r) => r.depth);
+  const d0 = Math.min(...ds), d1 = Math.max(...ds);
+  const lo = 0, hi = Math.ceil(Math.log10(Math.max(
+    ...rows.map((r) => Math.max(r.corners ? r.corners.nodes : 1, r.max3.nodes)))));
+  const px = (d) => L + ((W - L - R) * (d - d0)) / Math.max(1, d1 - d0);
+  const py = (v) => H - B - ((H - Tp - B) * (Math.log10(Math.max(1, v)) - lo)) / (hi - lo);
+
+  x.font = '11px "IBM Plex Mono", monospace';
+  x.strokeStyle = css("--line-soft");
+  for (let g = lo; g <= hi; g++) {
+    x.beginPath(); x.moveTo(L, py(10 ** g) + .5); x.lineTo(W - R, py(10 ** g) + .5); x.stroke();
+    x.fillStyle = css("--faint"); x.textAlign = "right";
+    x.fillText(g === 0 ? "1" : "10" + "⁰¹²³⁴⁵⁶⁷⁸⁹"[g], L - 8, py(10 ** g) + 4);
+  }
+  ds.forEach((d) => {
+    x.fillStyle = css("--faint"); x.textAlign = "center";
+    x.fillText(String(d), px(d), H - B + 17);
+  });
+
+  const line = (get, color, dash, label) => {
+    const pts = rows.filter(get).map((r) => [px(r.depth), py(get(r).nodes)]);
+    if (!pts.length) return;
+    x.strokeStyle = color; x.lineWidth = 2; x.setLineDash(dash);
+    x.beginPath(); pts.forEach(([a, b], i) => (i ? x.lineTo(a, b) : x.moveTo(a, b))); x.stroke();
+    x.setLineDash([]);
+    pts.forEach(([a, b]) => { x.fillStyle = color; x.beginPath(); x.arc(a, b, 3.5, 0, 7); x.fill(); });
+    const [lx, ly] = pts[pts.length - 1];
+    x.fillStyle = color; x.textAlign = "left";
+    x.font = '600 12px "Noto Sans TC", system-ui, sans-serif';
+    x.fillText(label, lx + 9, ly + 4);
+    x.font = '11px "IBM Plex Mono", monospace';
+  };
+  line((r) => r.corners, css("--estimate"), [5, 4], T("只用角塊表", "corner table only"));
+  line((r) => r.max3, css("--truth"), [], T("三張表取大", "all three tables"));
+
+  x.fillStyle = css("--muted"); x.textAlign = "center";
+  x.font = '12px "Noto Sans TC", system-ui, sans-serif';
+  x.fillText(T("打亂步數（縱軸是展開的節點數，對數）",
+               "scramble depth (vertical: nodes expanded, log scale)"), (L + W - R) / 2, H - 8);
 }
 
 function fit(c) {
@@ -988,5 +1379,5 @@ function loop(now) {
 setLang("zh");
 refresh();
 requestAnimationFrame(loop);
-window.addEventListener("resize", () => { drawPdb(); drawErr(); });
+window.addEventListener("resize", () => { drawPdb(); drawErr(); drawNodes(); });
 </script>

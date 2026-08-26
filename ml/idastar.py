@@ -34,16 +34,32 @@ from operator import itemgetter
 import numpy as np
 
 import corners
+import edges
 from cube import Cube
 
 INF = 1 << 30
+TIMEOUT = -2          # _dfs 的回傳值：時間到了，這一輪沒走完
 
 
 class OptimalSolver:
-    def __init__(self, cube: Cube, dist=None):
+    """用 pattern database 當 heuristic 求精確最短解。
+
+    use_edges=True 會把 Korf 的另外兩張表（各 6 條邊）一起用上，
+    三張取最大。三張都是下界，取大仍是下界，所以最短解的保證還在。
+
+    三個座標都是增量更新的：走一步就是幾次陣列查表，不必從貼紙重算。
+    這是每個節點只要十幾微秒的原因（見檔案開頭）。
+    """
+
+    def __init__(self, cube: Cube, dist=None, use_edges: bool = False):
         self.cube = cube
         self.dist = np.asarray(corners.load() if dist is None else dist)
         self.perm_tbl, self.ori_tbl = corners.build_move_tables(cube)
+        self.use_edges = use_edges
+        if use_edges:
+            self.ed = [np.asarray(edges.load(0)), np.asarray(edges.load(1))]
+            self.ep, self.ef = edges.build_move_tables(cube)
+            self.eflip = edges.N_FLIP
         self.getters = [itemgetter(*p.tolist()) for p in cube.perms]
         self.goal = tuple(int(v) for v in cube.goal)
         self.A = cube.n_actions
@@ -52,37 +68,63 @@ class OptimalSolver:
         # 對面成對：(U,D) (F,B) (L,R)。同一對之間可以交換順序，固定成小的先走。
         self.opposite = [f ^ 1 for f in range(6)]
         self.nodes = 0
+        self.stop_at = None
 
-    def h(self, p, o):
-        return int(self.dist[p * corners.N_ORI + o])
+    def h(self, p, o, e=None):
+        v = int(self.dist[p * corners.N_ORI + o])
+        if e is not None:
+            for i in (0, 1):
+                d = int(self.ed[i][e[2 * i] * self.eflip + e[2 * i + 1]])
+                if d > v:
+                    v = d
+        return v
 
-    def solve(self, state, max_depth: int = 20):
-        """回傳 (最短解, 展開節點數)。走到 max_depth 還沒解開就回 (None, nodes)。"""
-        s = tuple(int(v) for v in np.asarray(state).ravel())
-        idx = int(corners.index_of(self.cube, np.asarray(state).reshape(1, -1))[0])
+    def solve(self, state, max_depth: int = 20, deadline: float | None = None):
+        """回傳 (最短解, 展開節點數)。
+
+        走到 max_depth 還沒解開、或超過 deadline 秒，就回 (None, nodes)。
+        deadline 是為了「先解角之後第二階段有多貴」那類實驗——有些局面真的跑不完，
+        跑不完本身就是結果，但總得有辦法收工。
+        """
+        arr = np.asarray(state).reshape(1, -1)
+        s = tuple(int(v) for v in arr.ravel())
+        idx = int(corners.index_of(self.cube, arr)[0])
         p, o = divmod(idx, corners.N_ORI)
+        e = None
+        if self.use_edges:
+            e = []
+            for i in (0, 1):
+                ei = int(edges.index_of(self.cube, arr, edges.TRACKED[i])[0])
+                e += [ei // self.eflip, ei % self.eflip]
+            e = tuple(e)
         self.nodes = 0
+        self.stop_at = None if deadline is None else time.time() + deadline
         if s == self.goal:
             return [], 0
-        bound = self.h(p, o)
+        bound = self.h(p, o, e)
         path: list[int] = []
         while bound <= max_depth:
-            t = self._dfs(s, p, o, 0, bound, -1, 0, path)
+            t = self._dfs(s, p, o, e, 0, bound, -1, 0, path)
             if t == -1:
                 return path[:], self.nodes
+            if t == TIMEOUT:
+                return None, self.nodes
             if t >= INF:
                 return None, self.nodes
             bound = t
         return None, self.nodes
 
-    def _dfs(self, s, p, o, g, bound, last, run, path):
+    def _dfs(self, s, p, o, e, g, bound, last, run, path):
         """回傳 -1 代表找到了；否則回傳這條路上超過 bound 的最小 f（下一輪的新 bound）。"""
-        f = g + self.h(p, o)
+        f = g + self.h(p, o, e)
         if f > bound:
             return f
         if s == self.goal:
             return -1
         self.nodes += 1
+        # 每 65536 個節點才看一次時鐘——time.time() 在這個迴圈裡不便宜
+        if self.stop_at is not None and not self.nodes & 0xFFFF and time.time() > self.stop_at:
+            return TIMEOUT
         nxt = INF
         lf = self.face[last] if last >= 0 else -1
         for m in range(self.A):
@@ -97,12 +139,18 @@ class OptimalSolver:
             s2 = self.getters[m](s)
             p2 = int(self.perm_tbl[p, m])
             o2 = int(self.ori_tbl[o, m])
+            e2 = None
+            if e is not None:
+                e2 = (int(self.ep[e[0], m]), e[1] ^ int(self.ef[e[0], m]),
+                      int(self.ep[e[2], m]), e[3] ^ int(self.ef[e[2], m]))
             path.append(m)
-            r = self._dfs(s2, p2, o2, g + 1, bound,
+            r = self._dfs(s2, p2, o2, e2, g + 1, bound,
                           m, run + 1 if self.face[m] == lf else 1, path)
             if r == -1:
                 return -1
             path.pop()
+            if r == TIMEOUT:
+                return TIMEOUT
             if r < nxt:
                 nxt = r
         return nxt
@@ -114,12 +162,14 @@ def main():
     ap.add_argument("--n", type=int, default=5)
     ap.add_argument("--seed", type=int, default=99)
     ap.add_argument("--max-depth", type=int, default=20)
+    ap.add_argument("--edges", action="store_true", help="連 Korf 的兩張邊塊表一起用（三張取大）")
     a = ap.parse_args()
     cube = Cube(3)
-    sv = OptimalSolver(cube)
+    sv = OptimalSolver(cube, use_edges=a.edges)
     rng = np.random.default_rng(a.seed)
     st, _ = cube.scramble(np.full(a.n, a.depth), rng)
-    print(f"打亂 {a.depth} 步 × {a.n} 顆，用角塊表 + IDA* 求精確最短解")
+    print(f"打亂 {a.depth} 步 × {a.n} 顆，"
+          f"{'三張表取大' if a.edges else '只用角塊表'} + IDA* 求精確最短解")
     tot = []
     for i in range(a.n):
         t0 = time.time()

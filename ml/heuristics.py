@@ -65,6 +65,28 @@ class CornerPDB(Heuristic):
         return self.dist[self.corners.index_of(self.cube, states)].astype(np.float32)
 
 
+class EdgePDB(Heuristic):
+    """只看 12 條邊裡的 6 條，精確距離。Korf 三張表的第二、三張。
+
+    跟角塊那張一樣是下界（解開整顆的每一步也都在動這 6 條邊），
+    所以三張取最大仍然保證不高估——而且比任何一張單獨用都緊。
+    """
+
+    admissible = True
+
+    def __init__(self, cube: Cube, half: int, dist=None):
+        import edges
+        self.edges = edges
+        self.cube = cube
+        self.half = half
+        self.tracked = edges.TRACKED[half]
+        self.dist = edges.load(half) if dist is None else dist
+        self.name = f"邊塊距離表 {half}（精確）"
+
+    def __call__(self, states):
+        return self.dist[self.edges.index_of(self.cube, states, self.tracked)].astype(np.float32)
+
+
 class MaxHeuristic(Heuristic):
     """取大的。兩個都是下界的話取大仍是下界；只要有一個會高估，取大就會高估。"""
 
@@ -95,3 +117,10 @@ class ScaledHeuristic(Heuristic):
 
     def __call__(self, states):
         return self.h(states) * self.k
+
+
+def korf_bound(cube: Cube) -> "MaxHeuristic":
+    """Korf 的三張 pattern database 取最大 —— 目前最緊的、保證不高估的下界。"""
+    h = MaxHeuristic(CornerPDB(cube), EdgePDB(cube, 0), EdgePDB(cube, 1))
+    h.name = "三張表取大（角塊 + 兩半邊塊）"
+    return h

@@ -20,6 +20,8 @@ const moves = rj("shared/moves.json");
 const g2 = rj("ml/checkpoints/goal2.json");
 const d2 = rj("web/demo2.json");
 const b3 = rj("ml/checkpoints/benchmark-3x3.json");
+const g3 = rj("out/goal3.json");          // 三張表的值分佈 + IDA* 尺度
+const s2 = rj("out/stage2.json");         // 先解角繞了多遠
 
 // ── 共用的設計系統：從第一份 artifact 抽 <style> ──
 const first = rd("tools/artifact_template.html");
@@ -57,6 +59,9 @@ const DATA = {
   // 互動台要用的：示範方塊的兩種解法，以及沿路的估計值
   demo: { scramble: d2.scramble, oneShot: d2.oneShot, staged: d2.staged,
           cornerStickers: d2.cornerStickers },
+  // 第二階段（邊）：三張表的值分佈、IDA* 節點數怎麼隨深度長、先解角的繞路
+  edges: { bounds: g3.bounds, scale: g3.scale, build: rj("ml/checkpoints/edges-build.json") },
+  stage2: s2,
 };
 
 const CJK = "⺀-鿿豈-﫿＀-｠￠-￦　-〿";
