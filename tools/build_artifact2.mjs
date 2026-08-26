@@ -12,7 +12,7 @@ const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname).replac
 const rd = (p) => readFileSync(path.join(ROOT, p), "utf8");
 const rj = (p) => JSON.parse(rd(p));
 
-const MODULES = ["web/cube.js", "web/render.js"];
+const MODULES = ["web/cube.js", "web/render.js", "web/corners3.js"];
 const strip = (src) => src.split("\n").filter((l) => !/^\s*import\s/.test(l)).join("\n")
   .replace(/^export\s+/gm, "");
 
@@ -28,6 +28,9 @@ if (!style.startsWith("<style>")) throw new Error("抽不到第一份 artifact �
 
 const engine = [
   `const MOVES3 = ${JSON.stringify(moves["3"])};`,
+  // 角塊的兩張座標移動表（約 1.4 MB）。有了它們，瀏覽器就能用雙向 BFS
+  // 現算出精確的角塊距離——不必搬那張 88 MB 的表。
+  `const CORNER_TABLES = ${rd("web/corner_tables.json")};`,
   ...MODULES.map((m) => `\n// ──────── ${m} ────────\n${strip(rd(m))}`),
 ].join("\n");
 
@@ -51,6 +54,9 @@ const DATA = {
   net: g2.net,
   bench3: { by_depth: b3.by_depth, n: b3.n },
   ida: d2.idaVsAstar,
+  // 互動台要用的：示範方塊的兩種解法，以及沿路的估計值
+  demo: { scramble: d2.scramble, oneShot: d2.oneShot, staged: d2.staged,
+          cornerStickers: d2.cornerStickers },
 };
 
 const CJK = "⺀-鿿豈-﫿＀-｠￠-￦　-〿";

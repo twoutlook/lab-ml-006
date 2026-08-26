@@ -20,6 +20,9 @@ ml/checkpoints/corners3.npy
 # 所以不放這個的話，clone 下來的人得先訓練 2.5 小時才看得到 3x3x3 那一頁。
 # （2x2x2 3.5 MB、3x3x3 22 MB。4 位小數是必要的——3 位的誤差 0.048 步，太大。）
 
+# 對帳用的臨時題目（python ml/export_corner_tables.py 之後自己產）
+web/_corner_cases.json
+
 # 影片與 artifact 的建置產物（mp4、旁白 mp3、預覽 png、artifact.html）。
 # 影片在 YouTube 上，artifact 在 claude.ai 上，這裡不需要再存一份。
 out/*

@@ -47,6 +47,68 @@
   <!--YT_START--> · <a href="__YT_URL__" target="_blank" rel="noopener"><span class="zh">▶ 這一篇的影片</span><span class="en">▶ video for this piece</span></a><!--YT_END-->
 </p>
 
+<!-- ═══ 互動台 ═══ -->
+<section>
+  <div class="gauge"><div class="tick">
+    <div class="k"><span class="zh">試試看</span><span class="en">try it</span></div>
+    <div class="kl zh">「角塊還要幾步」是這一頁現算的，<br>不是查表——原因在下面。</div>
+    <div class="kl en">"corners need N moves" is computed live in this page, not looked up — see below.</div>
+  </div></div>
+  <div class="body" style="max-width:none">
+    <h2 class="zh">先玩再說</h2>
+    <h2 class="en">Try it first</h2>
+    <p class="zh">
+      打亂它，然後看那個數字：<strong>只把八顆角轉回去，還要幾步</strong>。那是精確值，不是估計。
+      按「只解角塊」會把角塊轉回去（而且保證是最短的）——注意邊塊會留在原地亂著，
+      那就是人類解方塊的第一階段。
+    </p>
+    <p class="en">
+      Scramble it and watch the number: <strong>how many moves the eight corners alone still need</strong>.
+      That is exact, not an estimate. "Solve corners" puts them back — provably optimally — and leaves the
+      edges scrambled where they are. That is stage one of how a person solves a cube.
+    </p>
+
+    <div class="bench">
+      <div class="bench-head">
+        <div class="t">3×3×3 corner bench</div>
+        <div class="t" id="benchMeta"></div>
+      </div>
+      <div class="bench-body">
+        <div class="cubewrap"><canvas id="cube3" width="460" height="530"></canvas></div>
+        <div class="bench-side">
+          <div class="readout">
+            <div><span class="zh">角塊還要</span><span class="en">corners need</span><b class="tru" id="rCd">–</b></div>
+            <div><span class="zh">整顆還要</span><span class="en">whole cube</span><b class="dim" id="rWhole" style="font-size:15px">?</b></div>
+          </div>
+          <div class="ctl">
+            <button class="b p" id="bScr"><span class="zh">打亂 25 步</span><span class="en">Scramble 25</span></button>
+            <button class="b" id="bCorner"><span class="zh">只解角塊</span><span class="en">Solve corners</span></button>
+            <button class="b" id="bReset"><span class="zh">還原</span><span class="en">Reset</span></button>
+          </div>
+          <div class="ctl">
+            <button class="b" id="bDemo"><span class="zh">播 GPU 算好的完整解法</span><span class="en">Replay the full GPU solve</span></button>
+          </div>
+          <div class="ctl" id="mvs"></div>
+          <div id="status"></div>
+        </div>
+      </div>
+    </div>
+    <p class="cap zh">
+      「整顆還要幾步」這一格是空的，因為那需要學出來的網路，而它有 297 萬個參數、
+      匯出成 22 MB，塞不進這一頁。角塊那一格填得出來，是因為它<strong>不必搬表</strong>——
+      瀏覽器現場跑一次雙向 BFS 就算得出來，典型 10 毫秒。原理在下面那一節。
+      按「播 GPU 算好的完整解法」的話，兩個數字都會動，因為那一串是先算好存進來的。
+    </p>
+    <p class="cap en">
+      The "whole cube" field stays blank: that needs the learned network, which has 2.97 million
+      parameters and exports to 22 MB — too large for this page. The corner field can be filled because it
+      <strong>needs no table</strong>: the browser runs a bidirectional search on the spot, typically in
+      10 ms. How that works is explained below. Hit "Replay the full GPU solve" and both numbers move,
+      because that sequence was computed in advance.
+    </p>
+  </div>
+</section>
+
 <!-- ═══ 人類 ═══ -->
 <section>
   <div class="gauge"><div class="tick">
@@ -758,6 +820,137 @@ function drawSqueeze() {
     + `<div class="sq-lab" style="right:0;top:52px;color:var(--faint)">${max}</div>`;
 }
 
+// ── 互動台 ────────────────────────────────────────────────
+// 這裡沒有神經網路（3×3×3 那份權重 22 MB，塞不進來），
+// 但有精確的角塊距離——瀏覽器現場用雙向 BFS 算，不必搬 88 MB 的表。
+const CUBE = new Cube(MOVES3);
+const SOLVER = new CornerSolver(CORNER_TABLES);
+const CL = () => [css("--u"), css("--d"), css("--f"), css("--b"), css("--l"), css("--r")];
+const VIEW = new CubeView(CUBE, CL());
+const CORNER_SET = new Set(DATA.demo.cornerStickers);
+const NOT_CORNER = new Set([...Array(54).keys()].filter((i) => !CORNER_SET.has(i)));
+const cvs = $("cube3"), cx2 = cvs.getContext("2d");
+
+let state = CUBE.solved(), queue = [], anim = null, busy = false;
+let dimEdges = false, wholeTrace = null, traceAt = 0;
+
+$("mvs").innerHTML = "";
+CUBE.moveNames.forEach((n, i) => {
+  const b = document.createElement("button");
+  b.className = "b mv"; b.textContent = n;
+  b.onclick = () => { if (!busy) { wholeTrace = null; queue.push(i); } };
+  $("mvs").appendChild(b);
+});
+
+const reset = () => {
+  state = CUBE.solved(); queue = []; dimEdges = false; wholeTrace = null; traceAt = 0;
+  $("status").textContent = ""; refresh();
+};
+$("bReset").onclick = () => { if (!busy) reset(); };
+$("bScr").onclick = () => {
+  if (busy) return;
+  reset();
+  const { seq } = CUBE.scramble(25);
+  seq.forEach((m) => queue.push(m));
+  $("status").textContent = T("打亂 25 步：", "25-move scramble: ") + CUBE.toStr(seq);
+};
+$("bCorner").onclick = () => {
+  if (busy) return;
+  const t0 = performance.now();
+  const r = SOLVER.solve(SOLVER.index(state));
+  const ms = performance.now() - t0;
+  if (!r) { $("status").textContent = T("算不出來（不該發生）", "no solution (should not happen)"); return; }
+  if (!r.seq.length) { $("status").textContent = T("角塊已經歸位了", "corners are already solved"); return; }
+  dimEdges = true; wholeTrace = null;
+  r.seq.forEach((m) => queue.push(m));
+  $("status").innerHTML = T(
+    `角塊的最短解 <b>${r.dist} 步</b>・雙向 BFS 走過 ${fmt(r.expanded)} 個角塊狀態・${ms.toFixed(0)} ms<br>${CUBE.toStr(r.seq)}`,
+    `Corners solved in <b>${r.dist} moves</b>, provably minimal · ${fmt(r.expanded)} corner states visited · ${ms.toFixed(0)} ms<br>${CUBE.toStr(r.seq)}`);
+};
+$("bDemo").onclick = () => {
+  if (busy) return;
+  reset();
+  const d = DATA.demo, st = d.staged;
+  wholeTrace = st.trace; traceAt = 0;
+  d.scramble.forEach((m) => queue.push(m));
+  st.stage1.forEach((m) => queue.push(m));
+  st.stage2.forEach((m) => queue.push(m));
+  $("status").innerHTML = T(
+    `先打亂 ${d.scramble.length} 步，再播 GPU 上算好的解：先解角 <b>${st.stage1.length} 步</b>，`
+      + `再解完 <b>${st.stage2.length} 步</b>。這一串的估計值是先算好的，所以「整顆還要幾步」也會動。`,
+    `${d.scramble.length} turns of scramble, then the solve computed on a GPU: corners in `
+      + `<b>${st.stage1.length}</b>, the rest in <b>${st.stage2.length}</b>. Both estimates move here, `
+      + `because this sequence was precomputed.`);
+};
+
+function setWhole(v) {
+  const el = $("rWhole");
+  if (v == null) {
+    el.style.fontSize = "15px"; el.className = "dim";
+    el.textContent = T("要網路，沒放進來", "needs the network");
+  } else {
+    el.style.fontSize = ""; el.className = "est";
+    el.textContent = Math.max(0, v).toFixed(2);
+  }
+}
+
+// 每走完一步都會呼叫。重播的時候兩個數字都從先算好的軌跡讀，不必再算；
+// 自己轉的時候角塊距離要跑一次雙向 BFS，所以留到佇列空了再算（見 refresh）。
+function tick() {
+  if (!wholeTrace) return;
+  const i = Math.min(traceAt, wholeTrace.pdb.length - 1);
+  $("rCd").textContent = String(Math.max(0, Math.round(wholeTrace.pdb[i])));
+  setWhole(wholeTrace.net[i]);
+}
+
+function refresh() {
+  if (wholeTrace) { tick(); return; }
+  const t0 = performance.now();
+  const r = SOLVER.solve(SOLVER.index(state));
+  const ms = performance.now() - t0;
+  $("rCd").textContent = r ? String(r.dist) : "?";
+  const bm = $("benchMeta");
+  if (bm) bm.textContent = T(`角塊距離現算 · ${ms.toFixed(0)} ms`, `corner distance, live · ${ms.toFixed(0)} ms`);
+  setWhole(null);
+}
+
+const TURN = 190;
+function loop(now) {
+  if (!anim && queue.length) {
+    const m = queue.shift(), nm = CUBE.moveNames[m];
+    anim = { move: m, face: nm[0], dir: nm.endsWith("'") ? 1 : -1, t0: now };
+    if (!busy && !wholeTrace) $("rCd").textContent = "…";   // 轉動中先不算，省得每一步都跑一次 BFS
+    busy = true;
+  }
+  if (anim) {
+    const q = Math.min(1, (now - anim.t0) / TURN);
+    const e = q < .5 ? 2 * q * q : 1 - 2 * (1 - q) * (1 - q);
+    anim.angle = anim.dir * e * Math.PI / 2;
+    if (q >= 1) {
+      state = CUBE.apply(state, anim.move); anim = null; traceAt++;
+      tick();
+      if (!queue.length) { busy = false; refresh(); }
+    }
+  }
+  cx2.clearRect(0, 0, cvs.width, cvs.height);
+  VIEW.colors = CL();
+  VIEW.yaw = -0.62 + Math.sin(now / 5200) * 0.16;
+  VIEW.draw(cx2, state, { cx: 230, cy: 205, scale: 38,
+    anim: anim ? { face: anim.face, angle: anim.angle } : null,
+    dim: dimEdges ? NOT_CORNER : null });
+  const cell = 14, fw = CUBE.n * cell + 3;
+  drawNet(cx2, CUBE, state, VIEW.colors, 230 - 2 * fw, 366, cell, 3);
+  if (CUBE.isSolved(state) && !anim) {
+    cx2.fillStyle = css("--truth");
+    cx2.font = '600 14px "Noto Sans TC", system-ui, sans-serif';
+    cx2.textAlign = "center";
+    cx2.fillText(T("解開了", "solved"), 230, 516);
+  }
+  requestAnimationFrame(loop);
+}
+
 setLang("zh");
+refresh();
+requestAnimationFrame(loop);
 window.addEventListener("resize", () => { drawPdb(); drawErr(); });
 </script>
