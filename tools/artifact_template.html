@@ -684,19 +684,35 @@ input[type=range] { accent-color: var(--estimate); width: 100%; }
       <tbody id="d3Rows"></tbody>
     </table></div>
     <p class="zh" style="margin-top:24px">
-      但這裡有個東西值得多看一眼：網路對「很遠的局面」一律回答 <strong>14 左右</strong>，
-      而它們的真實距離其實在 20 以上。這跟 2×2×2 那張圖上看到的往平均縮是同一個現象，
-      只是三階嚴重得多——所以深的局面才要展開三萬個節點。
-      <strong>搜尋等於在替 heuristic 補那 6 步的落差。</strong>
-      2×2×2 那邊能精確說出落差是多少；這邊只能從節點數反推。
+      那「這些解比最短解長多少」呢？精確值量不出來——但<strong>下界量得出來</strong>：
+      把同一批局面拿去加大搜尋力道，看解能短多少。20 顆隨機打亂的方塊，
+      weight 從 0.3 調到 0.6、節點預算放大，只算兩種設定都解得開的那 10 顆：
+      平均從 <strong>24.60</strong> 步掉到 <strong>21.40</strong> 步，
+      9 顆變短、1 顆持平、沒有一顆變長。
+      也就是說實務設定的解<strong>至少</strong>比最短解長 3.2 步。
+      代價是 11 倍的節點、12 倍的時間，而且 20 顆裡只有一半在預算內解得完。
+    </p>
+    <p class="cap zh">
+      那 10 個差值是 4、2、6、4、0、2、4、4、2、4——全部是偶數，
+      跟 2×2×2 那邊同一個道理（四分之一轉是奇置換，同一個局面的所有解長度同奇偶）。
+      落差從哪來也看得到：網路對深局面一律回答 <strong>14 左右</strong>，
+      而搜尋要展開三萬個節點才走得完。那三萬個節點就是在補這個落差。
     </p>
     <p class="en" style="margin-top:24px">
-      One thing is worth a second look: for far-away states the network answers about
-      <strong>14</strong>, while their true distance is north of 20. It is the same
-      regression-to-the-mean seen in the 2×2×2 chart, only far worse — which is exactly why deep
-      scrambles cost thirty thousand nodes. <strong>The search is paying off the heuristic's
-      six-move shortfall.</strong> On the 2×2×2 that shortfall can be stated exactly; here it can
-      only be inferred from the node count.
+      So how much longer than optimal are these solutions? The exact figure is unobtainable — but a
+      <strong>lower bound is not</strong>: push the search harder on the same cubes and see how much
+      shorter the solutions get. Over 20 random scrambles, raising the weight from 0.3 to 0.6 with a
+      larger node budget — counting only the 10 cubes both settings solved — the mean drops from
+      <strong>24.60</strong> to <strong>21.40</strong> moves: 9 shorter, 1 unchanged, none longer.
+      So the production setting is <strong>at least</strong> 3.2 moves off optimal. The price is 11×
+      the nodes, 12× the time, and only half the cubes finishing within budget.
+    </p>
+    <p class="cap en">
+      Those ten differences are 4, 2, 6, 4, 0, 2, 4, 4, 2, 4 — every one of them even, for the same
+      reason as on the 2×2×2 (a quarter turn is an odd permutation, so all solutions of a state share
+      the optimum's parity). Where the shortfall comes from is visible too: the network answers about
+      <strong>14</strong> for far states, and the search expands thirty thousand nodes to finish the job.
+      Those thirty thousand nodes are the shortfall being paid off.
     </p>
     <p class="cap zh" id="note3"></p>
     <p class="cap en" id="note3e"></p>
