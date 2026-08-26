@@ -20,10 +20,14 @@ import time
 
 import numpy as np
 
+import torch
+
 import corners
+from benchmark import load_net
 from cube import Cube
-from heuristics import CornerPDB, EdgePDB, korf_bound
+from heuristics import CornerPDB, EdgePDB, MaxHeuristic, korf_bound
 from idastar import OptimalSolver
+from search import bwas
 
 HERE = pathlib.Path(__file__).resolve().parent
 
@@ -69,6 +73,66 @@ class CornerStage:
         assert (self.pdb(cur) == 0).all(), "第一階段沒把角塊解完"
         return steps, cur
 
+    def best_endpoint(self, state, edge_h, slack: int = 2, beam: int = 3000):
+        """在所有「角塊歸位」的終點裡，挑一個讓第二階段最好走的。
+
+        上面那個 solve() 是**貪心**的：隨便挑一個距離少 1 的鄰居走下去。
+        角塊會歸位，但落在哪個邊塊局面完全看運氣——這就是為什麼第二階段
+        又長又難算。
+
+        關鍵是：角塊歸位的終點**有非常多個**。角塊最短解通常不只一條，
+        再放寬 slack 步就更多。這些終點的角塊都一樣（都歸位了），
+        差別只在邊塊。挑一個邊塊下界最小的，第二階段就從近得多的地方開始。
+
+        多花幾步在第一階段，換第二階段好走——這是這個拆法真正該有的樣子。
+
+        回傳 (第一階段的走法, 終點局面, 那個終點的邊塊下界)。
+        """
+        cube = self.cube
+        cur = np.asarray(state).reshape(1, -1).copy()
+        d0 = int(self.dist[corners.index_of(cube, cur)[0]])
+        budget = d0 + slack
+        seq = np.zeros((1, 0), dtype=np.int8)
+        best = None                              # (分數, 走法, 終點, 邊塊下界)
+        if d0 == 0:
+            return [], cur[0].copy(), float(edge_h(cur)[0])
+
+        for g in range(budget):
+            m = cube.n_actions
+            rep = np.repeat(cur, m, axis=0)
+            mv = np.tile(np.arange(m), len(cur))
+            ch = cube.apply(rep, mv)
+            cs = np.concatenate(
+                [np.repeat(seq, m, axis=0), mv[:, None].astype(np.int8)], axis=1)
+
+            # 還走得到嗎：剩下的預算夠不夠把角塊轉回去
+            cd = self.dist[corners.index_of(cube, ch)]
+            keep = (g + 1) + cd <= budget
+            ch, cs, cd = ch[keep], cs[keep], cd[keep]
+            if not len(ch):
+                break
+            _, u = np.unique(ch, axis=0, return_index=True)
+            ch, cs, cd = ch[u], cs[u], cd[u]
+
+            eh = edge_h(ch)
+            done = cd == 0
+            if done.any():
+                # 分數就是「兩個階段合起來至少要幾步」的下界
+                score = (g + 1) + eh[done]
+                k = int(np.argmin(score))
+                if best is None or score[k] < best[0]:
+                    best = (float(score[k]), cs[done][k].copy(),
+                            ch[done][k].copy(), float(eh[done][k]))
+
+            # 排名留下 beam 個。角塊已經歸位的也留著——
+            # 預算還有剩的話，繞開再轉回來可能落在更好的邊塊局面。
+            rank = (g + 1) + cd + eh
+            order = np.argsort(rank, kind="stable")[:beam]
+            cur, seq = ch[order], cs[order]
+
+        assert best is not None, "beam 裡找不到角塊歸位的終點——不可能"
+        return [int(v) for v in best[1]], best[2], best[3]
+
 
 def main():
     ap = argparse.ArgumentParser()
@@ -79,6 +143,12 @@ def main():
     ap.add_argument("--full-budget", type=float, default=1800, help="第二階段每顆最多幾秒")
     ap.add_argument("--n-bound", type=int, default=4000, help="只取下界的方塊數")
     ap.add_argument("--budget", type=float, default=240, help="每個深度求精確解最多幾秒")
+    ap.add_argument("--slack", type=int, default=2, help="第一階段可以比角塊最短解多走幾步")
+    ap.add_argument("--beam", type=int, default=2000, help="挑終點時每層留幾個候選")
+    ap.add_argument("--deep-depths", type=int, nargs="*", default=[20, 25, 30])
+    ap.add_argument("--n-deep", type=int, default=4, help="深局面每個深度幾顆")
+    ap.add_argument("--n-bound-pick", type=int, default=60, help="下界對照每個深度幾顆")
+    ap.add_argument("--net-nodes", type=int, default=400_000, help="網路求解器的節點上限")
     a = ap.parse_args()
 
     cube = Cube(3)
@@ -86,42 +156,66 @@ def main():
     st1 = CornerStage(cube)
     kb, cp = korf_bound(cube), CornerPDB(cube)
     e0, e1 = EdgePDB(cube, 0), EdgePDB(cube, 1)
+    edge_lo = MaxHeuristic(e0, e1)          # 角塊歸位之後，就只剩這兩張在說話
     sv = OptimalSolver(cube, use_edges=True)
+    dev = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    net, _ = load_net(3, dev)
 
-    # ── 0. 精確的繞路：兩個階段都求到最短 ──────────────────────
-    print("\n[1/4] 精確的繞路（兩個階段都是最短的）")
-    print(f"  {'打亂':>4} {'#':>2} {'直接最短解':>11} {'階段1':>7} {'階段2':>7} "
-          f"{'合計':>6} {'繞路':>7} {'階段2節點':>14} {'秒':>8}")
+    # ── 0. 兩種第一階段的對照 ───────────────────────────────────
+    #
+    # 貪心：隨便走一條角塊最短解，落在哪個邊塊局面看運氣。
+    # 挑過：在所有「角塊歸位」的終點裡（含放寬 slack 步的），
+    #       挑一個邊塊下界最小的。多花幾步換第二階段好走。
+    #
+    print(f"\n[1/4] 第一階段怎麼收尾，決定第二階段有多難"
+          f"（挑終點：放寬 {a.slack} 步、beam {a.beam}）")
+    print(f"  {'打亂':>4} {'#':>2} {'最短解':>7} │ {'貪心 s1':>7} {'貪心 s2':>7} "
+          f"{'合計':>5} {'節點':>12} {'秒':>7} │ {'挑過 s1':>7} {'挑過 s2':>7} "
+          f"{'合計':>5} {'節點':>12} {'秒':>7}")
     exact = []
     for d in a.full_depths:
         s, _ = cube.scramble(np.full(a.n_full, d), rng)
         n1, after = st1.solve(s)
         for i in range(len(s)):
-            t0 = time.time()
             opt, _ = sv.solve(s[i], 20)
-            seq, nodes = sv.solve(after[i], 20, deadline=a.full_budget)
-            dt = time.time() - t0
-            if seq is None:
-                print(f"  {d:>4} {i:>2} {len(opt):>11} {n1[i]:>7} {'跑不完':>7} "
-                      f"{'—':>6} {'—':>7} {nodes:>14,} {dt:>8.1f}")
-                exact.append({"depth": d, "optimal": len(opt), "stage1": int(n1[i]),
-                              "stage2": None, "nodes": nodes, "secs": dt})
-                continue
-            chk = after[i:i + 1].copy()
-            for m in seq:
-                chk = cube.apply(chk, np.array([m]))
-            assert cube.is_solved(chk)[0], "第二階段的解轉不回去"
-            tot = n1[i] + len(seq)
-            print(f"  {d:>4} {i:>2} {len(opt):>11} {n1[i]:>7} {len(seq):>7} "
-                  f"{tot:>6} {tot - len(opt):>+7} {nodes:>14,} {dt:>8.1f}")
-            exact.append({"depth": d, "optimal": len(opt), "stage1": int(n1[i]),
-                          "stage2": len(seq), "total": int(tot),
-                          "detour": int(tot - len(opt)), "nodes": nodes, "secs": dt})
-    ok = [r for r in exact if r["stage2"] is not None]
-    if ok:
-        det = np.array([r["detour"] for r in ok], float)
-        print(f"  {len(ok)}/{len(exact)} 顆兩階段都求到最短，平均繞路 {det.mean():+.2f} 步"
-              f"（最少 {det.min():+.0f}、最多 {det.max():+.0f}）")
+            row = {"depth": d, "optimal": len(opt)}
+
+            for tag, first, endpt in (
+                    ("greedy", int(n1[i]), after[i]),
+                    ("best", *(lambda r: (len(r[0]), r[1]))(
+                        st1.best_endpoint(s[i], edge_lo, slack=a.slack, beam=a.beam)))):
+                t0 = time.time()
+                seq, nodes = sv.solve(endpt, 20, deadline=a.full_budget)
+                dt = time.time() - t0
+                r = {"stage1": first, "nodes": nodes, "secs": dt, "stage2": None}
+                if seq is not None:
+                    chk = np.asarray(endpt).reshape(1, -1).copy()
+                    for m in seq:
+                        chk = cube.apply(chk, np.array([m]))
+                    assert cube.is_solved(chk)[0], "第二階段的解轉不回去"
+                    r["stage2"] = len(seq)
+                    r["total"] = first + len(seq)
+                    r["detour"] = r["total"] - len(opt)
+                row[tag] = r
+
+            f = lambda r: (f"{r['stage1']:>7} {r['stage2']:>7} {r['total']:>5} "
+                           f"{r['nodes']:>12,} {r['secs']:>7.1f}"
+                           if r["stage2"] is not None else
+                           f"{r['stage1']:>7} {'跑不完':>7} {'—':>5} "
+                           f"{r['nodes']:>12,} {r['secs']:>7.1f}")
+            print(f"  {d:>4} {i:>2} {len(opt):>7} │ {f(row['greedy'])} │ {f(row['best'])}",
+                  flush=True)
+            exact.append(row)
+
+    for tag, label in (("greedy", "貪心"), ("best", "挑過")):
+        ok = [r for r in exact if r[tag]["stage2"] is not None]
+        if not ok:
+            continue
+        det = np.array([r[tag]["detour"] for r in ok], float)
+        nd = np.array([r[tag]["nodes"] for r in ok], float)
+        print(f"  {label}：{len(ok)}/{len(exact)} 顆算得完，平均繞路 {det.mean():+.2f} 步"
+              f"（最少 {det.min():+.0f}、最多 {det.max():+.0f}）、"
+              f"第二階段平均 {nd.mean():,.0f} 節點")
 
     # ── 1. 有證明的繞路：淺局面，直接最短解算得出來 ──────────────
     print("\n[2/4] 更深一點：直接最短解還算得動，但第二階段只能給下界")
@@ -153,17 +247,75 @@ def main():
               f"{row['detour']:>+9.2f}")
     print("  「至少繞路」是有證明的下限：階段 1 是最短的，階段 2 用下界，兩個加起來仍是下界。")
 
-    # ── 2. 深局面只能給下界 ────────────────────────────────────
-    print(f"\n[3/4] 深局面（{a.n_bound} 顆，兩邊都只能給下界）")
-    print(f"  {'打亂':>4} {'階段1':>7} {'階段2下界':>11} {'先解角至少':>11}")
+    # ── 2. 深局面：第二階段求不到最短，但求得到「一個解」 ──────────
+    #
+    # 打亂 20 步以上的方塊，第二階段用 IDA* 求最短是不可能的。
+    # 但這個專案本來就有一支「找得到解、但不保證最短」的求解器——
+    # 上一篇那個學出來的網路配批次加權 A*。用它，深局面的總步數就量得出來。
+    #
+    print(f"\n[3/4] 深局面：第二階段改用網路求解（找得到解，但不保證最短）")
+    print(f"  {'打亂':>4} {'#':>2} │ {'貪心 s1':>7} {'貪心 s2':>7} {'合計':>5} {'節點':>10} "
+          f"│ {'挑過 s1':>7} {'挑過 s2':>7} {'合計':>5} {'節點':>10} │ {'省':>5}")
     deep = []
-    for d in (18, 25, 30):
-        s, _ = cube.scramble(np.full(a.n_bound, d), rng)
+    net_cfg = dict(cube.cfg["search"])
+    for d in a.deep_depths:
+        s, _ = cube.scramble(np.full(a.n_deep, d), rng)
         n1, after = st1.solve(s)
-        lo2 = kb(after)
-        deep.append({"depth": d, "stage1": float(n1.mean()),
-                     "stage2_lower": float(lo2.mean()), "cf_lower": float((n1 + lo2).mean())})
-        print(f"  {d:>4} {n1.mean():>7.2f} {lo2.mean():>11.2f} {(n1 + lo2).mean():>11.2f}")
+        for i in range(len(s)):
+            row = {"depth": d}
+            b_seq, b_end, _ = st1.best_endpoint(s[i], edge_lo, slack=a.slack, beam=a.beam)
+            for tag, first, endpt in (("greedy", int(n1[i]), after[i]),
+                                      ("best", len(b_seq), b_end)):
+                seq, nodes = bwas(cube, net, endpt, dev, net_cfg["weight"],
+                                  net_cfg["batch"], a.net_nodes)
+                r = {"stage1": first, "stage2": None if seq is None else len(seq),
+                     "nodes": int(nodes)}
+                if seq is not None:
+                    chk = np.asarray(endpt).reshape(1, -1).copy()
+                    for m in seq:
+                        chk = cube.apply(chk, np.array([m]))
+                    assert cube.is_solved(chk)[0], "第二階段的解轉不回去"
+                    r["total"] = first + len(seq)
+                row[tag] = r
+            g, b = row["greedy"], row["best"]
+            save = (f"{g['total'] - b['total']:>+5}"
+                    if g.get("total") and b.get("total") else f"{'—':>5}")
+            f = lambda r: (f"{r['stage1']:>7} {r['stage2']:>7} {r['total']:>5} "
+                           f"{r['nodes']:>10,}" if r["stage2"] is not None else
+                           f"{r['stage1']:>7} {'找不到':>7} {'—':>5} {r['nodes']:>10,}")
+            print(f"  {d:>4} {i:>2} │ {f(g)} │ {f(b)} │ {save}", flush=True)
+            deep.append(row)
+
+    for tag, label in (("greedy", "貪心"), ("best", "挑過")):
+        ok = [r for r in deep if r[tag].get("total")]
+        if ok:
+            t = np.array([r[tag]["total"] for r in ok], float)
+            nd = np.array([r[tag]["nodes"] for r in ok], float)
+            print(f"  {label}：{len(ok)}/{len(deep)} 顆解得開，"
+                  f"平均合計 {t.mean():.2f} 步、第二階段平均 {nd.mean():,.0f} 節點")
+
+    # ── 2b. 下界的全貌（便宜，可以跑很多顆）────────────────────
+    print(f"\n[3b/4] 兩種第一階段的下界對照（每個深度 {a.n_bound} 顆，只查表不搜尋）")
+    print(f"  {'打亂':>4} {'貪心 s1':>8} {'貪心邊下界':>11} {'貪心合計下界':>13} "
+          f"│ {'挑過 s1':>8} {'挑過邊下界':>11} {'挑過合計下界':>13}")
+    bounds = []
+    for d in (18, 25, 30):
+        s, _ = cube.scramble(np.full(a.n_bound_pick, d), rng)
+        n1, after = st1.solve(s)
+        lo_g = edge_lo(after)
+        n1b, lo_b = [], []
+        for i in range(len(s)):
+            seq, _, lo = st1.best_endpoint(s[i], edge_lo, slack=a.slack, beam=a.beam)
+            n1b.append(len(seq)); lo_b.append(lo)
+        n1b, lo_b = np.array(n1b, float), np.array(lo_b, float)
+        row = {"depth": d, "cubes": len(s),
+               "greedy": {"stage1": float(n1.mean()), "lower": float(lo_g.mean()),
+                          "total_lower": float((n1 + lo_g).mean())},
+               "best": {"stage1": float(n1b.mean()), "lower": float(lo_b.mean()),
+                        "total_lower": float((n1b + lo_b).mean())}}
+        bounds.append(row)
+        print(f"  {d:>4} {n1.mean():>8.2f} {lo_g.mean():>11.2f} {(n1 + lo_g).mean():>13.2f} "
+              f"│ {n1b.mean():>8.2f} {lo_b.mean():>11.2f} {(n1b + lo_b).mean():>13.2f}")
 
     # ── 3. 為什麼第二階段會變難 ────────────────────────────────
     print("\n[4/4] 角塊一歸位，三張表就只剩兩張在說話")
@@ -183,6 +335,7 @@ def main():
 
     out = HERE.parent / "out" / "stage2.json"
     out.write_text(json.dumps({"exact": exact, "detour": detour, "deep": deep,
+                               "bounds": bounds, "pick": {"slack": a.slack, "beam": a.beam},
                                "heuristic": {"before": before, "after": post}},
                               ensure_ascii=False, indent=1), encoding="utf-8")
     print(f"\n寫出 {out}")
