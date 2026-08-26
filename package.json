@@ -1,0 +1,1 @@
+{"name":"lab-ml-006","private":true,"type":"module","scripts":{"serve":"python -m http.server 8000","voice":"python tools/make_voice.py","record":"node tools/record_video.mjs"},"devDependencies":{"puppeteer-core":"^25.8.0"}}

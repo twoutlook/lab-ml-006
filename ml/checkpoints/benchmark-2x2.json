@@ -1,0 +1,380 @@
+{
+  "size": 2,
+  "n": 500,
+  "seed": 20260826,
+  "rows": [
+    {
+      "name": "亂轉 random",
+      "solve_rate": 0.0,
+      "mean_len": null,
+      "optimal_rate": null,
+      "mean_nodes": 280.0,
+      "note": "預算 280 步"
+    },
+    {
+      "name": "貪婪（只用網路，不搜尋）",
+      "solve_rate": 0.342,
+      "mean_len": 10.269005847953217,
+      "optimal_rate": 0.8713450292397661,
+      "mean_nodes": 6.0,
+      "note": "每一步展開一層挑 h 最小；最短解率是在它解得開的那些裡面算的"
+    },
+    {
+      "solve_rate": 1.0,
+      "mean_len": 20.254,
+      "median_len": 16.0,
+      "max_len": 57,
+      "mean_nodes": 66.348,
+      "median_nodes": 21.0,
+      "ms_per_cube": 229.44979572296143,
+      "optimal_rate": 0.354,
+      "excess": 9.56,
+      "name": "加權 A*（weight=0.0）",
+      "batch": 1
+    },
+    {
+      "solve_rate": 1.0,
+      "mean_len": 12.186,
+      "median_len": 12.0,
+      "max_len": 19,
+      "mean_nodes": 46.256,
+      "median_nodes": 17.0,
+      "ms_per_cube": 109.68656826019287,
+      "optimal_rate": 0.534,
+      "excess": 1.492,
+      "name": "加權 A*（weight=0.3）",
+      "batch": 1
+    },
+    {
+      "solve_rate": 1.0,
+      "mean_len": 11.062,
+      "median_len": 11.0,
+      "max_len": 15,
+      "mean_nodes": 27.706,
+      "median_nodes": 17.0,
+      "ms_per_cube": 66.0403642654419,
+      "optimal_rate": 0.82,
+      "excess": 0.368,
+      "name": "加權 A*（weight=0.6）",
+      "batch": 1
+    },
+    {
+      "solve_rate": 1.0,
+      "mean_len": 10.71,
+      "median_len": 11.0,
+      "max_len": 13,
+      "mean_nodes": 35.548,
+      "median_nodes": 22.0,
+      "ms_per_cube": 84.23961400985718,
+      "optimal_rate": 0.992,
+      "excess": 0.016,
+      "name": "加權 A*（weight=1.0）",
+      "batch": 1
+    },
+    {
+      "name": "最短解（全狀態 BFS，沒有 ML）",
+      "solve_rate": 1.0,
+      "mean_len": 10.694,
+      "optimal_rate": 1.0,
+      "mean_nodes": 3674160.0,
+      "note": "整張距離表 33 MB"
+    }
+  ],
+  "batch_ablation": {
+    "n": 120,
+    "rows": [
+      {
+        "solve_rate": 1.0,
+        "mean_len": 20.616666666666667,
+        "median_len": 18.0,
+        "max_len": 48,
+        "mean_nodes": 65.09166666666667,
+        "median_nodes": 21.0,
+        "ms_per_cube": 154.30684089660645,
+        "optimal_rate": 0.35833333333333334,
+        "excess": 9.883333333333333,
+        "batch": 1,
+        "weight": 0.0
+      },
+      {
+        "solve_rate": 1.0,
+        "mean_len": 12.316666666666666,
+        "median_len": 12.0,
+        "max_len": 19,
+        "mean_nodes": 47.38333333333333,
+        "median_nodes": 18.5,
+        "ms_per_cube": 167.35094785690308,
+        "optimal_rate": 0.5166666666666667,
+        "excess": 1.5833333333333333,
+        "batch": 1,
+        "weight": 0.3
+      },
+      {
+        "solve_rate": 1.0,
+        "mean_len": 11.066666666666666,
+        "median_len": 11.0,
+        "max_len": 14,
+        "mean_nodes": 27.533333333333335,
+        "median_nodes": 18.0,
+        "ms_per_cube": 116.52164459228516,
+        "optimal_rate": 0.8416666666666667,
+        "excess": 0.3333333333333333,
+        "batch": 1,
+        "weight": 0.6
+      },
+      {
+        "solve_rate": 1.0,
+        "mean_len": 10.733333333333333,
+        "median_len": 11.0,
+        "max_len": 13,
+        "mean_nodes": 38.49166666666667,
+        "median_nodes": 20.5,
+        "ms_per_cube": 162.6185158888499,
+        "optimal_rate": 1.0,
+        "excess": 0.0,
+        "batch": 1,
+        "weight": 1.0
+      },
+      {
+        "solve_rate": 1.0,
+        "mean_len": 14.35,
+        "median_len": 11.0,
+        "max_len": 46,
+        "mean_nodes": 78.41666666666667,
+        "median_nodes": 51.0,
+        "ms_per_cube": 71.30647897720337,
+        "optimal_rate": 0.7083333333333334,
+        "excess": 3.6166666666666667,
+        "batch": 5,
+        "weight": 0.0
+      },
+      {
+        "solve_rate": 1.0,
+        "mean_len": 11.466666666666667,
+        "median_len": 11.0,
+        "max_len": 17,
+        "mean_nodes": 72.5,
+        "median_nodes": 51.0,
+        "ms_per_cube": 65.86474180221558,
+        "optimal_rate": 0.75,
+        "excess": 0.7333333333333333,
+        "batch": 5,
+        "weight": 0.3
+      },
+      {
+        "solve_rate": 1.0,
+        "mean_len": 10.95,
+        "median_len": 11.0,
+        "max_len": 14,
+        "mean_nodes": 59.5,
+        "median_nodes": 51.0,
+        "ms_per_cube": 54.71778114636739,
+        "optimal_rate": 0.9,
+        "excess": 0.21666666666666667,
+        "batch": 5,
+        "weight": 0.6
+      },
+      {
+        "solve_rate": 1.0,
+        "mean_len": 10.733333333333333,
+        "median_len": 11.0,
+        "max_len": 13,
+        "mean_nodes": 67.58333333333333,
+        "median_nodes": 51.0,
+        "ms_per_cube": 61.82972391446431,
+        "optimal_rate": 1.0,
+        "excess": 0.0,
+        "batch": 5,
+        "weight": 1.0
+      },
+      {
+        "solve_rate": 1.0,
+        "mean_len": 10.833333333333334,
+        "median_len": 11.0,
+        "max_len": 14,
+        "mean_nodes": 183.66666666666666,
+        "median_nodes": 187.0,
+        "ms_per_cube": 46.78769906361898,
+        "optimal_rate": 0.95,
+        "excess": 0.1,
+        "batch": 20,
+        "weight": 0.0
+      },
+      {
+        "solve_rate": 1.0,
+        "mean_len": 10.833333333333334,
+        "median_len": 11.0,
+        "max_len": 14,
+        "mean_nodes": 184.0,
+        "median_nodes": 187.0,
+        "ms_per_cube": 47.04677263895671,
+        "optimal_rate": 0.95,
+        "excess": 0.1,
+        "batch": 20,
+        "weight": 0.3
+      },
+      {
+        "solve_rate": 1.0,
+        "mean_len": 10.8,
+        "median_len": 11.0,
+        "max_len": 13,
+        "mean_nodes": 184.16666666666666,
+        "median_nodes": 187.0,
+        "ms_per_cube": 47.04910318056742,
+        "optimal_rate": 0.9666666666666667,
+        "excess": 0.06666666666666667,
+        "batch": 20,
+        "weight": 0.6
+      },
+      {
+        "solve_rate": 1.0,
+        "mean_len": 10.733333333333333,
+        "median_len": 11.0,
+        "max_len": 13,
+        "mean_nodes": 188.16666666666666,
+        "median_nodes": 187.0,
+        "ms_per_cube": 47.98107147216797,
+        "optimal_rate": 1.0,
+        "excess": 0.0,
+        "batch": 20,
+        "weight": 1.0
+      },
+      {
+        "solve_rate": 1.0,
+        "mean_len": 10.733333333333333,
+        "median_len": 11.0,
+        "max_len": 13,
+        "mean_nodes": 1500.6666666666667,
+        "median_nodes": 1554.0,
+        "ms_per_cube": 54.80451981226604,
+        "optimal_rate": 1.0,
+        "excess": 0.0,
+        "batch": 200,
+        "weight": 0.0
+      },
+      {
+        "solve_rate": 1.0,
+        "mean_len": 10.733333333333333,
+        "median_len": 11.0,
+        "max_len": 13,
+        "mean_nodes": 1500.6666666666667,
+        "median_nodes": 1554.0,
+        "ms_per_cube": 50.66132744153341,
+        "optimal_rate": 1.0,
+        "excess": 0.0,
+        "batch": 200,
+        "weight": 0.3
+      },
+      {
+        "solve_rate": 1.0,
+        "mean_len": 10.733333333333333,
+        "median_len": 11.0,
+        "max_len": 13,
+        "mean_nodes": 1500.6666666666667,
+        "median_nodes": 1554.0,
+        "ms_per_cube": 47.20315535863241,
+        "optimal_rate": 1.0,
+        "excess": 0.0,
+        "batch": 200,
+        "weight": 0.6
+      },
+      {
+        "solve_rate": 1.0,
+        "mean_len": 10.733333333333333,
+        "median_len": 11.0,
+        "max_len": 13,
+        "mean_nodes": 1500.6666666666667,
+        "median_nodes": 1554.0,
+        "ms_per_cube": 46.66829506556193,
+        "optimal_rate": 1.0,
+        "excess": 0.0,
+        "batch": 200,
+        "weight": 1.0
+      }
+    ]
+  },
+  "truth_mean": 10.694,
+  "god_number": 14,
+  "state_count": 3674160,
+  "heuristic": {
+    "n": 200000,
+    "mae": 1.1438,
+    "bias": -0.8764,
+    "over_rate": 0.2316,
+    "within_1": 0.5204,
+    "by_distance": [
+      {
+        "d": 4,
+        "n": 31,
+        "mean_h": 3.846,
+        "std_h": 0.081,
+        "over": 0.0
+      },
+      {
+        "d": 5,
+        "n": 134,
+        "mean_h": 4.887,
+        "std_h": 0.106,
+        "over": 0.1642
+      },
+      {
+        "d": 6,
+        "n": 502,
+        "mean_h": 5.986,
+        "std_h": 0.171,
+        "over": 0.4622
+      },
+      {
+        "d": 7,
+        "n": 1797,
+        "mean_h": 7.086,
+        "std_h": 0.312,
+        "over": 0.5832
+      },
+      {
+        "d": 8,
+        "n": 6072,
+        "mean_h": 8.575,
+        "std_h": 0.688,
+        "over": 0.7836
+      },
+      {
+        "d": 9,
+        "n": 19696,
+        "mean_h": 9.547,
+        "std_h": 0.711,
+        "over": 0.7771
+      },
+      {
+        "d": 10,
+        "n": 50892,
+        "mean_h": 9.822,
+        "std_h": 0.715,
+        "over": 0.4551
+      },
+      {
+        "d": 11,
+        "n": 73325,
+        "mean_h": 9.924,
+        "std_h": 0.723,
+        "over": 0.0245
+      },
+      {
+        "d": 12,
+        "n": 42580,
+        "mean_h": 9.971,
+        "std_h": 0.735,
+        "over": 0.0
+      },
+      {
+        "d": 13,
+        "n": 4944,
+        "mean_h": 9.918,
+        "std_h": 0.768,
+        "over": 0.0
+      }
+    ]
+  },
+  "trained_iters": 9400,
+  "n_params": 472577
+}

@@ -1,0 +1,21 @@
+node_modules/
+__pycache__/
+*.pyc
+
+# 訓練產物：binary，而且 python ml/train.py 就能重跑出來。
+ml/checkpoints/*.pt
+ml/checkpoints/train-*.log
+
+# 2x2x2 的完整距離表（33 MB）。python ml/bfs.py 花 18 秒就重算得出來，
+# 而且它是驗證用的正確答案，不該進版控——要驗就自己算一次。
+ml/checkpoints/dist222.npz
+
+# 網頁要用的權重。兩份都進版控：checkpoint 本身沒進版控，
+# 所以不放這個的話，clone 下來的人得先訓練 2.5 小時才看得到 3x3x3 那一頁。
+# （2x2x2 3.5 MB、3x3x3 22 MB。4 位小數是必要的——3 位的誤差 0.048 步，太大。）
+
+# 影片與 artifact 的建置產物（mp4、旁白 mp3、預覽 png、artifact.html）。
+# 影片在 YouTube 上，artifact 在 claude.ai 上，這裡不需要再存一份。
+out/*
+!out/plan.json
+!out/youtube.json

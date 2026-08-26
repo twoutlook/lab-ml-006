@@ -1,0 +1,56 @@
+{
+  "_": "常數的唯一來源。JS 和 Python 都讀這一份；貼紙的置換表在 shared/moves.json（由 ml/gen_moves.py 算出來）。",
+
+  "sizes": {
+    "2": {
+      "n": 2,
+      "godNumber": 14,
+      "scrambleMax": 14,
+      "stateCount": 3674160,
+      "net": { "hidden": 256, "blocks": 2 },
+      "davi": {
+        "batch": 20000,
+        "iters": 12000,
+        "lr": 0.001,
+        "lrDecay": 0.9999,
+        "targetUpdateLoss": 0.15,
+        "maxStall": 5,
+        "checkEvery": 200
+      },
+      "search": { "weight": 0.6, "batch": 1, "maxNodes": 200000 }
+    },
+    "3": {
+      "n": 3,
+      "godNumber": 26,
+      "scrambleMax": 30,
+      "stateCount": null,
+      "net": { "hidden": 512, "blocks": 4 },
+      "davi": {
+        "batch": 20000,
+        "iters": 60000,
+        "lr": 0.001,
+        "lrDecay": 0.9999,
+        "targetUpdateLoss": 0.3,
+        "maxStall": 5,
+        "checkEvery": 500
+      },
+      "search": { "weight": 0.3, "batch": 1000, "maxNodes": 1000000 }
+    }
+  },
+
+  "_searchBatch": "批次大小是為了餵飽 GPU，不是演算法的一部分——但它會把 weight 的效果吃掉。2x2x2 整棵搜尋樹才一兩千個節點，batch 設 200 的話每一輪都把佇列整個彈光，等於退化成 BFS：四個 weight 跑出來一模一樣，而且多花 20 倍的節點。所以 2x2x2 用 batch=1（就是課本上的 A*），3x3x3 的樹夠大才用得起大批次。ml/benchmark.py 會把這個對照表一起量出來。",
+
+  "_targetUpdate": "DAVI 原本的規則是『loss 掉到門檻以下才把 target 往前推一版』。照論文用 0.05，這個網路的 loss 根本掉不到：12,000 輪裡 target 只推了 10 版就再也不動，最好只到 MAE 1.35。放寬到 0.15 之後，同樣 12,000 輪推了 34 版，MAE 1.13。maxStall 是保險：連續這麼多次檢查都沒推，就強制推一版，免得整個訓練靜悄悄地停住。",
+
+  "_moveCost": "每轉一次算 1 步。所以 cost-to-go 就等於「還要幾步」，網路輸出可以直接當步數讀。",
+  "moveCost": 1.0,
+
+  "view": {
+    "width": 640,
+    "height": 640,
+    "colors": ["#f5f5f5", "#ffd21e", "#20a94a", "#1e6fd9", "#ff8c1a", "#e8352e"],
+    "colorNames": ["白 U", "黃 D", "綠 F", "藍 B", "橘 L", "紅 R"],
+    "gap": 3,
+    "radius": 4
+  }
+}

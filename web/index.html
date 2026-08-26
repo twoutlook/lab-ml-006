@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>魔術方塊 × DeepCubeA</title>
+<style>
+  :root {
+    --bg: #060911; --panel: #0f172a; --line: #1e293b;
+    --fg: #e2e8f0; --dim: #94a3b8; --accent: #38bdf8; --good: #4ade80; --warn: #fbbf24;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 24px; background: var(--bg); color: var(--fg);
+    font-family: "Noto Sans TC", system-ui, -apple-system, sans-serif;
+    display: flex; justify-content: center;
+  }
+  .wrap { width: 100%; max-width: 1120px; }
+  h1 { font-size: 20px; margin: 0 0 4px; letter-spacing: .5px; }
+  .sub { color: var(--dim); font-size: 13px; margin: 0 0 18px; line-height: 1.7; }
+  .layout { display: grid; grid-template-columns: auto 1fr; gap: 20px; align-items: start; }
+  @media (max-width: 1040px) { .layout { grid-template-columns: 1fr; } }
+  canvas#stage { border-radius: 10px; border: 1px solid var(--line); display: block;
+                 width: 560px; max-width: 100%; background: #070b14; }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px; margin-bottom: 14px; }
+  .panel h2 { font-size: 12px; text-transform: uppercase; letter-spacing: 1.2px; color: var(--dim); margin: 0 0 10px; font-weight: 600; }
+  button {
+    font: inherit; font-size: 13px; padding: 7px 12px; border-radius: 7px; cursor: pointer;
+    background: #1e293b; color: var(--fg); border: 1px solid #334155;
+  }
+  button:hover:not(:disabled) { background: #263449; }
+  button:disabled { opacity: .4; cursor: not-allowed; }
+  button.active { background: var(--accent); color: #06121c; border-color: var(--accent); font-weight: 600; }
+  button.mv { font-family: ui-monospace, monospace; padding: 6px 0; width: 46px; text-align: center; }
+  .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .hud { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px 6px; font-size: 13px; }
+  .hud div span:first-child { display: block; color: var(--dim); font-size: 11px; margin-bottom: 2px; }
+  .hud b { font-family: ui-monospace, monospace; font-size: 20px; font-weight: 600; }
+  .note { font-size: 12px; line-height: 1.65; margin: 10px 0 0; padding: 8px 10px; border-radius: 6px; }
+  .note.ok { background: rgba(56,189,248,.1); color: #7dd3fc; }
+  .note.warn { background: rgba(251,191,36,.1); color: #fcd34d; }
+  input[type=range] { accent-color: var(--accent); }
+  code { background: #0b1220; padding: 1px 5px; border-radius: 4px; font-size: 12px; color: #7dd3fc; }
+  .help { font-size: 12.5px; color: var(--dim); line-height: 1.75; }
+  .help p { margin: 0 0 8px; }
+  #seq { font-family: ui-monospace, monospace; font-size: 12px; color: var(--dim);
+         line-height: 1.7; word-break: break-all; min-height: 34px; }
+  #seq b { color: var(--good); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>魔術方塊 × DeepCubeA</h1>
+  <p class="sub">
+    網路只學一件事：<b>看一眼局面，猜「還要幾步」</b>。它不會告訴你要轉哪一面——那是 A* 搜尋的工作。<br>
+    2×2×2 這邊，頁面同時算得出<b>精確</b>的最短步數（雙向 BFS），所以你可以直接看到網路差多少。
+  </p>
+
+  <div class="layout">
+    <div>
+      <canvas id="stage" width="560" height="656"></canvas>
+      <p id="seq"></p>
+    </div>
+
+    <div>
+      <div class="panel">
+        <h2>方塊</h2>
+        <div class="row" style="margin-bottom:10px">
+          <button id="size2" class="active">2×2×2</button>
+          <button id="size3">3×3×3</button>
+          <span id="sizeNote" style="font-size:12px;color:var(--dim)"></span>
+        </div>
+        <div class="row" style="margin-bottom:10px">
+          <span style="font-size:12px;color:var(--dim);line-height:1.6">
+            3×3×3 的網路有 297 萬個參數，純 JS 一個局面約 5 毫秒：「網路猜還要幾步」是即時的，
+            但<b>搜尋</b>只在打亂 8 步以內跑得動（30 步要展開三萬個節點）。深的局面用
+            <code>python ml/benchmark.py --size 3</code>。
+          </span>
+        </div>
+        <div class="row">
+          <span style="font-size:13px;color:var(--dim)">打亂</span>
+          <input type="range" id="depth" min="1" max="14" value="11" style="flex:1;min-width:100px">
+          <b id="depthLabel" style="font-family:ui-monospace,monospace;width:44px">11 步</b>
+          <button id="btnScramble">打亂</button>
+          <button id="btnReset">還原</button>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>自己轉</h2>
+        <div class="row" id="moveBtns" style="gap:5px"></div>
+        <div class="row" style="margin-top:8px">
+          <button id="btnUndo">上一步</button>
+          <span style="font-size:12px;color:var(--dim)">每轉一下，右邊兩個數字就重算一次</span>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>網路怎麼看現在這個局面</h2>
+        <div class="hud">
+          <div><span>網路猜還要</span><b id="hudH" style="color:var(--accent)">–</b></div>
+          <div><span>其實還要</span><b id="hudExact" style="color:var(--good)">–</b></div>
+          <div><span>差</span><b id="hudErr">–</b></div>
+        </div>
+        <p class="note ok" id="netInfo">載入中…</p>
+      </div>
+
+      <div class="panel">
+        <h2>讓網路解</h2>
+        <div class="row" style="margin-bottom:8px">
+          <button id="btnSolve">加權 A* 解開</button>
+          <button id="btnGreedy">只用網路走一步</button>
+        </div>
+        <div class="row">
+          <span style="font-size:13px;color:var(--dim)">weight</span>
+          <input type="range" id="weight" min="0" max="20" value="6" style="flex:1;min-width:90px">
+          <b id="weightLabel" style="font-family:ui-monospace,monospace;width:34px">0.6</b>
+        </div>
+        <p class="help" style="margin-top:8px">
+          <code>f = weight × 已走步數 + 網路猜的剩餘步數</code><br>
+          weight 調到 0 就是純貪婪：只往網路覺得最近的方向衝，快，但解會變長。調高就比較在意「已經走多遠」，接近標準 A*，解比較短但要展開更多節點。
+        </p>
+        <p class="note warn" id="searchInfo" style="display:none"></p>
+      </div>
+
+      <div class="panel">
+        <h2>怎麼跑起來</h2>
+        <div class="help">
+          <p>這頁要用小型伺服器開（<code>file://</code> 不能 fetch）：專案根目錄跑
+             <code>python -m http.server 8000</code>，開 <code>http://localhost:8000/web/</code></p>
+          <p>1. 算轉動表：<code>python ml/gen_moves.py</code></p>
+          <p>2. 算 2×2×2 的正確答案：<code>python ml/bfs.py</code></p>
+          <p>3. 訓練：<code>python ml/train.py --size 2</code></p>
+          <p>4. 匯出給網頁：<code>python ml/export_policy.py --size 2</code></p>
+          <p>5. 大樣本實測：<code>python ml/benchmark.py --size 2 --n 1000</code></p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script type="module" src="main.js"></script>
+</body>
+</html>

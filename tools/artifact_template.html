@@ -1,0 +1,1197 @@
+<title>還要幾步</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chivo:wght@600;700;900&family=IBM+Plex+Mono:wght@400;500;600&family=Noto+Sans+TC:wght@400;500;700&family=Source+Sans+3:wght@400;600&display=swap">
+<style>
+/* ─────────────────────────────────────────────────────────────
+   量測用的配色：兩個語意色，不是裝飾色。
+     estimate = 網路猜的      truth = 精確算出來的
+   中性色偏綠灰（不是純灰也不是藍黑），跟兩個語意色同一族。
+   ───────────────────────────────────────────────────────────── */
+:root {
+  --ground:    #f1f3f0;
+  --surface:   #fbfbf9;
+  --surface-2: #e8ebe6;
+  --ink:       #141a19;
+  --ink-soft:  #3f4a48;
+  --muted:     #79837f;
+  --faint:     #a2aca8;
+  --line:      #d6dbd5;
+  --line-soft: #e4e8e2;
+  --estimate:  #c1551b;
+  --estimate-w:rgba(193,85,27,.13);
+  --truth:     #0d6c60;
+  --truth-w:   rgba(13,108,96,.12);
+  --warn:      #96701a;
+  --bad:       #a33a2e;
+  --shadow:    0 1px 2px rgba(20,26,25,.05), 0 10px 28px rgba(20,26,25,.06);
+  --u:#f2f2ee; --d:#e8bd18; --f:#1d8f45; --b:#1c62bd; --l:#e07a17; --r:#c8352c;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ground:    #0d100f;
+    --surface:   #161a18;
+    --surface-2: #1e2321;
+    --ink:       #e9ece9;
+    --ink-soft:  #b4bcb8;
+    --muted:     #808b87;
+    --faint:     #5b6663;
+    --line:      #272d2a;
+    --line-soft: #1e2321;
+    --estimate:  #ef8a45;
+    --estimate-w:rgba(239,138,69,.16);
+    --truth:     #3fb5a3;
+    --truth-w:   rgba(63,181,163,.15);
+    --warn:      #d6a83c;
+    --bad:       #e0705f;
+    --shadow:    0 1px 2px rgba(0,0,0,.5), 0 12px 32px rgba(0,0,0,.4);
+  }
+}
+:root[data-theme="dark"] {
+  --ground:    #0d100f;
+  --surface:   #161a18;
+  --surface-2: #1e2321;
+  --ink:       #e9ece9;
+  --ink-soft:  #b4bcb8;
+  --muted:     #808b87;
+  --faint:     #5b6663;
+  --line:      #272d2a;
+  --line-soft: #1e2321;
+  --estimate:  #ef8a45;
+  --estimate-w:rgba(239,138,69,.16);
+  --truth:     #3fb5a3;
+  --truth-w:   rgba(63,181,163,.15);
+  --warn:      #d6a83c;
+  --bad:       #e0705f;
+  --shadow:    0 1px 2px rgba(0,0,0,.5), 0 12px 32px rgba(0,0,0,.4);
+}
+
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--ground);
+  color: var(--ink);
+  font-family: "Noto Sans TC", "Source Sans 3", system-ui, sans-serif;
+  font-size: 17px;
+  line-height: 1.85;
+  font-feature-settings: "kern";
+}
+html[data-lang="en"] body { font-family: "Source Sans 3", system-ui, sans-serif; line-height: 1.7; }
+html[data-lang="zh"] .en, html[data-lang="en"] .zh { display: none; }
+
+h1, h2, h3, .display {
+  font-family: Chivo, "Noto Sans TC", system-ui, sans-serif;
+  text-wrap: balance; letter-spacing: -.02em;
+}
+h2 { font-size: clamp(27px, 3.6vw, 40px); line-height: 1.16; margin: 0 0 12px; font-weight: 900; }
+h3 { font-size: 19.5px; line-height: 1.4; margin: 0 0 6px; font-weight: 700; letter-spacing: -.01em; }
+p  { margin: 0 0 17px; color: var(--ink-soft); }
+strong { color: var(--ink); font-weight: 700; }
+a { color: var(--estimate); text-underline-offset: 3px; text-decoration-thickness: 1px; }
+a:focus-visible, button:focus-visible { outline: 2px solid var(--estimate); outline-offset: 3px; border-radius: 3px; }
+.mono, code, .num {
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+}
+code { font-size: .85em; background: var(--surface-2); padding: 1px 6px; border-radius: 3px; color: var(--ink); }
+.dim { color: var(--muted); }
+.est { color: var(--estimate); }
+.tru { color: var(--truth); }
+
+/* ── 版面：左邊是一條量測標尺，右邊是內容 ── */
+.wrap { max-width: 1200px; margin: 0 auto; padding: 0 26px 110px; }
+.top {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 16px;
+  padding: 20px 0 0; flex-wrap: wrap; border-bottom: 1px solid var(--line-soft);
+  padding-bottom: 14px;
+}
+.brand { font-family: "IBM Plex Mono", monospace; font-size: 11.5px; letter-spacing: .18em; text-transform: uppercase; color: var(--muted); }
+.switches { display: flex; gap: 6px; }
+.switch {
+  font: 600 11.5px/1 "IBM Plex Mono", monospace; letter-spacing: .1em;
+  padding: 7px 11px; border-radius: 2px; cursor: pointer;
+  background: transparent; color: var(--muted); border: 1px solid var(--line);
+}
+.switch[aria-pressed="true"] { background: var(--ink); color: var(--ground); border-color: var(--ink); }
+
+.hero { padding: 56px 0 20px; max-width: 30em; }
+.hero h1 {
+  font-size: clamp(46px, 8.4vw, 96px); line-height: .93; letter-spacing: -.045em;
+  margin: 0 0 22px; font-weight: 900;
+}
+.hero h1 em { font-style: normal; color: var(--estimate); }
+.lede { font-size: clamp(18px, 2vw, 21.5px); color: var(--ink-soft); }
+
+/* 量測標尺：每一節的左邊掛一個「這一節確立的數字」 */
+section { display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: 0 48px; padding: 58px 0 0; }
+@media (max-width: 900px) { section { grid-template-columns: 1fr; gap: 0; } }
+.gauge { position: sticky; top: 26px; align-self: start; padding-top: 6px; }
+.gauge .tick { border-top: 2px solid var(--ink); padding-top: 10px; }
+.gauge .k {
+  font-family: "IBM Plex Mono", monospace; font-size: 26px; font-weight: 600;
+  letter-spacing: -.02em; line-height: 1.15; color: var(--ink); word-break: break-all;
+}
+.gauge .kl { font-size: 12.5px; color: var(--muted); line-height: 1.5; margin-top: 6px; }
+@media (max-width: 900px) {
+  .gauge { position: static; margin-bottom: 22px; }
+  .gauge .k { font-size: 21px; }
+}
+.body { max-width: 40em; }
+html[data-lang="en"] .body { max-width: 36em; }
+
+/* ── 公差條：整份文件的骨架元件 ──
+   一條線、一個真值刻度、一個估計值標記、中間標出差距。
+   這個專案講的每一件事都是這個形狀。 */
+.tol { margin: 26px 0 30px; }
+.tol-row { display: grid; grid-template-columns: 108px minmax(0,1fr) 92px; gap: 14px; align-items: center; padding: 7px 0; }
+.tol-label { font-size: 13.5px; color: var(--muted); text-align: right; }
+.tol-track { position: relative; height: 26px; }
+.tol-track::before {
+  content: ""; position: absolute; left: 0; right: 0; top: 12px; height: 1px; background: var(--line);
+}
+.tol-band { position: absolute; top: 6px; height: 14px; background: var(--estimate-w); border-radius: 2px; }
+.tol-mark { position: absolute; top: 4px; width: 3px; height: 18px; border-radius: 1px; }
+.tol-mark.e { background: var(--estimate); }
+.tol-mark.t { background: var(--truth); }
+.tol-val { font-family: "IBM Plex Mono", monospace; font-size: 14.5px; font-variant-numeric: tabular-nums; }
+
+.figure { background: var(--surface); border: 1px solid var(--line); border-radius: 3px; padding: 20px 20px 14px; margin: 26px 0 30px; box-shadow: var(--shadow); }
+.figure canvas { display: block; width: 100%; height: auto; }
+.figure figcaption, .cap { font-size: 13.5px; color: var(--muted); line-height: 1.65; margin-top: 12px; }
+.legend { display: flex; gap: 18px; flex-wrap: wrap; font-size: 13px; color: var(--muted); margin-bottom: 10px; }
+.legend i { display: inline-block; width: 13px; height: 3px; border-radius: 2px; margin-right: 6px; vertical-align: middle; }
+
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(155px, 1fr)); gap: 0; margin: 40px 0 0; border-top: 2px solid var(--ink); }
+.stat { padding: 15px 20px 16px 0; border-right: 1px solid var(--line-soft); }
+.stat:last-child { border-right: 0; }
+.stat b { display: block; font-family: "IBM Plex Mono", monospace; font-size: 27px; font-weight: 600; letter-spacing: -.02em; line-height: 1.2; }
+.stat span { display: block; font-size: 12.5px; color: var(--muted); margin-top: 3px; line-height: 1.45; }
+
+table { width: 100%; border-collapse: collapse; font-size: 14.5px; }
+.scroller { overflow-x: auto; margin: 24px 0 28px; border: 1px solid var(--line); border-radius: 3px; background: var(--surface); }
+th, td { padding: 10px 14px; text-align: right; border-bottom: 1px solid var(--line-soft); white-space: nowrap; }
+th:first-child, td:first-child { text-align: left; }
+thead th { font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); font-weight: 600; border-bottom: 1px solid var(--line); }
+tbody tr:last-child td { border-bottom: 0; }
+td.n { font-family: "IBM Plex Mono", monospace; font-variant-numeric: tabular-nums; }
+tr.hl td { background: var(--estimate-w); font-weight: 600; }
+tr.gt td { color: var(--truth); }
+
+.callout { border-left: 3px solid var(--estimate); background: var(--surface); padding: 16px 20px; margin: 26px 0; border-radius: 0 3px 3px 0; }
+.callout h3 { margin-bottom: 4px; }
+.callout p:last-child { margin-bottom: 0; }
+.pit { counter-increment: pit; }
+.pit h3::before {
+  content: "坑 " counter(pit); display: block;
+  font-family: "IBM Plex Mono", monospace; font-size: 11.5px; letter-spacing: .14em;
+  color: var(--estimate); text-transform: uppercase; margin-bottom: 3px; font-weight: 600;
+}
+html[data-lang="en"] .pit h3::before { content: "pitfall " counter(pit); }
+.pits { counter-reset: pit; }
+
+/* ── 互動台 ── */
+.bench {
+  margin: 34px 0 8px; background: var(--surface); border: 1px solid var(--line);
+  border-radius: 3px; box-shadow: var(--shadow); overflow: hidden;
+}
+.bench-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px;
+  padding: 13px 20px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+.bench-head .t { font-family: "IBM Plex Mono", monospace; font-size: 11.5px; letter-spacing: .16em; text-transform: uppercase; color: var(--muted); }
+.bench-body { display: grid; grid-template-columns: minmax(0,1fr) 320px; gap: 0; }
+@media (max-width: 820px) { .bench-body { grid-template-columns: 1fr; } }
+#cubewrap { padding: 14px; display: flex; align-items: center; justify-content: center; background: var(--surface-2); }
+#cube { display: block; width: 100%; max-width: 460px; height: auto; }
+.bench-side { padding: 18px 20px 22px; border-left: 1px solid var(--line); display: flex; flex-direction: column; gap: 16px; }
+@media (max-width: 820px) { .bench-side { border-left: 0; border-top: 1px solid var(--line); } }
+.readout { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.readout div span { display: block; font-size: 11.5px; color: var(--muted); letter-spacing: .04em; }
+.readout div b { font-family: "IBM Plex Mono", monospace; font-size: 30px; font-weight: 600; letter-spacing: -.02em; }
+.ctl { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+button.b {
+  font: 600 13px/1 "Noto Sans TC", system-ui, sans-serif; padding: 8px 12px; border-radius: 2px;
+  cursor: pointer; background: var(--surface-2); color: var(--ink); border: 1px solid var(--line);
+}
+button.b:hover:not(:disabled) { border-color: var(--ink); }
+button.b:disabled { opacity: .45; cursor: not-allowed; }
+button.b.p { background: var(--ink); color: var(--ground); border-color: var(--ink); }
+button.mv { font-family: "IBM Plex Mono", monospace; font-weight: 500; width: 44px; padding: 7px 0; text-align: center; }
+input[type=range] { accent-color: var(--estimate); width: 100%; }
+#status { font-size: 12.5px; color: var(--muted); min-height: 3.2em; line-height: 1.55; word-break: break-all; }
+#status b { color: var(--truth); }
+.mini { font-size: 12.5px; color: var(--muted); line-height: 1.6; }
+
+.foot { margin-top: 74px; padding-top: 22px; border-top: 2px solid var(--ink); font-size: 14px; color: var(--muted); }
+.foot a { color: var(--ink); }
+.links { display: flex; gap: 22px; flex-wrap: wrap; margin-bottom: 14px; }
+@media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+</style>
+
+<div class="wrap">
+
+<div class="top">
+  <div class="brand">lab-ml-006 · Rubik's Cube × DeepCubeA</div>
+  <div class="switches">
+    <button class="switch" id="lz" aria-pressed="true">中文</button>
+    <button class="switch" id="le" aria-pressed="false">EN</button>
+  </div>
+</div>
+
+<header class="hero">
+  <h1 class="zh">還要<br><em>幾步</em>？</h1>
+  <h1 class="en">How <em>far</em><br>is this?</h1>
+  <p class="lede zh">
+    這個網路不知道要轉哪一面。它只會回答一個問題：<strong>這個局面離解開還有幾步。</strong>
+    真正把方塊解開的是搜尋。而因為 2×2×2 的正確答案可以整個算出來，
+    「它猜得有多準」這件事在這裡是<strong>量出來的</strong>，不是估的。
+  </p>
+  <p class="lede en">
+    This network has no idea which face to turn. It answers exactly one question:
+    <strong>how many moves is this state from solved.</strong> Search does the solving.
+    And because a 2×2×2's ground truth can be enumerated in full, "how wrong is the guess"
+    here is <strong>measured</strong>, not estimated.
+  </p>
+  <div class="stats" id="heroStats"></div>
+</header>
+
+<!--YT_START-->
+<p style="margin:26px 0 0"><a href="__YT_URL__" target="_blank" rel="noopener">
+  <span class="zh">▶ 影片版（繁中旁白）</span><span class="en">▶ Watch the video (Mandarin narration)</span></a></p>
+<!--YT_END-->
+
+<!-- ═══ 互動台 ═══ -->
+<section>
+  <div class="gauge"><div class="tick">
+    <div class="k">試試看</div>
+    <div class="kl zh">頁面裡的網路是真的在跑推論。<br>右邊那個「其實還要」是當場用雙向 BFS 算的，不是查表。</div>
+    <div class="kl en">The network really runs here. "Actually" is computed live by bidirectional BFS — no lookup table.</div>
+  </div></div>
+  <div class="body" style="max-width:none">
+    <h2 class="zh">先玩再說</h2>
+    <h2 class="en">Try it first</h2>
+    <p class="zh">打亂它，然後看兩個數字：網路猜幾步，跟真正還要幾步。再按「用 A* 解開」。</p>
+    <p class="en">Scramble it, then watch two numbers: what the network guesses, and what it actually is. Then hit solve.</p>
+
+    <div class="bench">
+      <div class="bench-head">
+        <div class="t">2×2×2 test bench</div>
+        <div class="t" id="netmeta"></div>
+      </div>
+      <div class="bench-body">
+        <div id="cubewrap"><canvas id="cube" width="460" height="530"></canvas></div>
+        <div class="bench-side">
+          <div class="readout">
+            <div><span class="zh">網路猜還要</span><span class="en">network says</span><b class="est" id="rH">–</b></div>
+            <div><span class="zh">其實還要</span><span class="en">actually</span><b class="tru" id="rE">–</b></div>
+          </div>
+          <div class="tol"><div class="tol-row" style="grid-template-columns:1fr">
+            <div class="tol-track" id="tolTrack" style="height:30px"></div>
+          </div></div>
+          <div class="ctl">
+            <input type="range" id="depth" min="1" max="14" value="11">
+          </div>
+          <div class="ctl">
+            <button class="b p" id="bScr"><span class="zh">打亂</span><span class="en">Scramble</span> <span class="mono" id="dLab">11</span></button>
+            <button class="b" id="bSolve"><span class="zh">用 A* 解開</span><span class="en">Solve with A*</span></button>
+            <button class="b" id="bReset"><span class="zh">還原</span><span class="en">Reset</span></button>
+          </div>
+          <div class="ctl" id="mvs"></div>
+          <div id="status"></div>
+        </div>
+      </div>
+    </div>
+    <p class="cap zh">畫面下半是攤平圖，六個面都看得到——只看立體圖會漏掉背面那三片。</p>
+    <p class="cap en">The flat net below the cube shows all six faces; the 3D view alone hides three of them.</p>
+  </div>
+</section>
+
+<!-- ═══ 地板 ═══ -->
+<section>
+  <div class="gauge"><div class="tick">
+    <div class="k" id="gRand">0.0%</div>
+    <div class="kl zh">亂轉一萬步的解開率<br>（3×3×3，實測）</div>
+    <div class="kl en">solve rate after 10,000 random turns (3×3×3, measured)</div>
+  </div></div>
+  <div class="body">
+    <h2 class="zh">這題不能靠碰運氣</h2>
+    <h2 class="en">Luck is not an option here</h2>
+    <p class="zh">
+      一顆三階魔術方塊有 43,252,003,274,489,856,000 種排列，其中只有一種是解開的。
+      拿一千個打亂過的方塊，每個亂轉一萬步——解開幾個？<strong>零個。</strong>
+      不是機率很低，是實際跑完之後一個都沒有。
+    </p>
+    <p class="en">
+      A 3×3×3 cube has 43,252,003,274,489,856,000 arrangements and exactly one is solved.
+      Take a thousand scrambled cubes, turn each one ten thousand times at random — how many come out solved?
+      <strong>None.</strong> Not "rarely". Zero, after actually running it.
+    </p>
+    <p class="zh">
+      這件事把一整類方法排除掉了。前面幾個專案——打磚塊、河內塔——亂走至少偶爾會撞到終點，
+      撞到了才有東西可以往回傳。魔術方塊撞不到。所以「先隨機探索、嚐到一次成功、再把訊號往回傳」
+      這條 DQN 的路，在這裡從第一步就是斷的。
+    </p>
+    <p class="en">
+      That single fact rules out a whole family of methods. In the earlier labs — Breakout, Tower of Hanoi —
+      a random walker does eventually stumble onto the goal, and that first taste of success is what the
+      learning signal propagates back from. Here it never happens. The DQN loop of
+      explore → stumble → backpropagate is broken at step one.
+    </p>
+  </div>
+</section>
+
+<!-- ═══ 基準 ═══ -->
+<section>
+  <div class="gauge"><div class="tick">
+    <div class="k">3,674,160</div>
+    <div class="kl zh">2×2×2 的全部局面<br>= 7! × 3⁶，18 秒可以全部列出來</div>
+    <div class="kl en">every 2×2×2 state = 7! × 3⁶ — enumerable in 18 seconds</div>
+  </div></div>
+  <div class="body">
+    <h2 class="zh">先做一把尺</h2>
+    <h2 class="en">Build a ruler first</h2>
+    <p class="zh">
+      所以先退一步，做一個小的。二階魔術方塊，把 DBL 那顆角固定住之後只剩三個面可以轉
+      （不固定的話整顆方塊的旋轉會讓同一個局面有 24 種寫法，狀態空間憑空大 24 倍）。
+      總共 3,674,160 個局面——小到可以整個列出來。
+    </p>
+    <p class="en">
+      So step down to something smaller. On a 2×2×2 with the DBL corner pinned, only three faces turn
+      (without pinning, whole-cube rotations give every state 24 spellings and inflate the space 24-fold).
+      That leaves 3,674,160 states — few enough to enumerate completely.
+    </p>
+    <p class="zh">
+      從解開狀態做一次廣度優先搜尋，18 秒之後，每一個局面的精確最短步數就全部在手上了。
+      這張表跟機器學習一點關係都沒有。它是<strong>正確答案</strong>——是這整個專案的量尺。
+    </p>
+    <p class="en">
+      One breadth-first sweep from the solved state, eighteen seconds, and the exact optimal distance
+      of every single state is in hand. That table has nothing to do with machine learning.
+      It is the <strong>ground truth</strong> — the ruler everything else gets measured against.
+    </p>
+
+    <figure class="figure">
+      <div class="legend">
+        <span><i style="background:var(--truth)"></i><span class="zh">局面數</span><span class="en">states</span></span>
+        <span><i style="background:var(--estimate)"></i><span class="zh">10–12 步（大多數）</span><span class="en">10–12 moves (the bulk)</span></span>
+      </div>
+      <canvas id="cHist" width="900" height="360"></canvas>
+      <figcaption class="zh">
+        算出來的分布跟數學社群公開的四分之一轉距離表<strong>逐項相同</strong>，總和也剛好是 7!×3⁶。
+        這順便驗了置換表沒寫錯——那 12 張表是從 3D 座標算出來的，不是手打的，
+        錯一個數字不會噴錯，只會讓後面訓練的東西根本不是魔術方塊。
+      </figcaption>
+      <figcaption class="en">
+        The distribution matches the published quarter-turn distance table <strong>entry for entry</strong>,
+        and sums to exactly 7!×3⁶. That doubles as a check on the twelve permutation tables, which are
+        derived from 3D geometry rather than typed by hand: a single wrong entry would throw no error at all,
+        it would just mean the thing being trained isn't a Rubik's cube.
+      </figcaption>
+    </figure>
+
+    <div class="callout">
+      <h3 class="zh">順便看見一個陷阱</h3>
+      <h3 class="en">And it exposes a trap</h3>
+      <p class="zh">
+        看中間那兩根。<span class="num" id="peakShare"></span> 的局面落在 10 到 12 步之間。
+        也就是說，一個「不管看到什麼都回答 11」的假網路，平均誤差就已經很小了。
+        所以後面那個「平均差 X 步」的數字，單獨看沒有意義——必須先扣掉這條底線。
+      </p>
+      <p class="en">
+        Look at the two tallest bars: <span class="num" id="peakShare2"></span> of all states sit between
+        10 and 12 moves. A fake network that ignores its input and always answers "11" would already post a
+        small mean error. So the headline "off by X moves on average" means nothing on its own —
+        this baseline has to be subtracted first.
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ 訓練 ═══ -->
+<section>
+  <div class="gauge"><div class="tick">
+    <div class="k">DAVI</div>
+    <div class="kl zh">deep approximate value iteration<br>沒有 episode、沒有 replay buffer、沒有 epsilon</div>
+    <div class="kl en">deep approximate value iteration — no episodes, no replay buffer, no epsilon</div>
+  </div></div>
+  <div class="body">
+    <h2 class="zh">資料是倒著造出來的</h2>
+    <h2 class="en">The data is manufactured backwards</h2>
+    <p class="zh">
+      這一段跟系列前面五個專案的作法差最多。訓練資料不是玩出來的，是<strong>造</strong>出來的：
+      從已經解開的狀態往回亂轉 d 步。往回 d 步的局面，答案一定不超過 d 步——
+      所以資料自帶難度標籤，而且要多少有多少。不需要 agent 先會玩才有東西可學。
+    </p>
+    <p class="en">
+      This is where the project departs hardest from the previous five. Training data isn't played,
+      it's <strong>manufactured</strong>: take the solved state and walk backwards d random moves.
+      A state d moves back is at most d moves from solved, so every sample arrives with a difficulty
+      label attached, in unlimited supply. Nothing has to be good at the game first.
+    </p>
+    <p class="zh">訓練目標是把每個局面的子節點展開一層，取最小的那個加一：</p>
+    <p class="en">The regression target expands one layer of children and takes the minimum, plus one:</p>
+    <p style="text-align:center"><code style="font-size:15.5px;padding:8px 14px;display:inline-block">y(s) = min<sub>a</sub> [ 1 + h<sub>target</sub>( a(s) ) ]</code></p>
+    <p class="zh">
+      注意這一條<strong>跟策略完全無關</strong>。不管現在的網路多爛，這個目標永遠是
+      「所有子節點裡最好的那一個」。河內塔那個專案被爛策略帶壞的 n-step return，在這裡不存在——
+      因為這裡根本沒有「行為策略」這個東西。
+    </p>
+    <p class="en">
+      Note that this is <strong>policy-independent</strong>. However bad the current network is, the target
+      is still "the best of all children". The n-step return that a weak behaviour policy poisoned in the
+      Hanoi lab simply cannot go wrong here — there is no behaviour policy to be weak.
+    </p>
+    <div class="scroller"><table>
+      <thead><tr>
+        <th><span class="zh">前面五個專案（DQN / AlphaZero）</span><span class="en">labs 001–005 (DQN / AlphaZero)</span></th>
+        <th style="text-align:left"><span class="zh">這個專案（DAVI）</span><span class="en">this lab (DAVI)</span></th>
+      </tr></thead>
+      <tbody id="cmpRows"></tbody>
+    </table></div>
+  </div>
+</section>
+
+<!-- ═══ 量測 ═══ -->
+<section>
+  <div class="gauge"><div class="tick">
+    <div class="k" id="gMae">–</div>
+    <div class="kl zh">平均差幾步<br>（跟精確答案比，抽樣 20 萬個局面）</div>
+    <div class="kl en">mean absolute error vs exact ground truth (200k sampled states)</div>
+  </div></div>
+  <div class="body">
+    <h2 class="zh">量一下它有多準</h2>
+    <h2 class="en">Now measure it</h2>
+    <p class="zh">
+      把網路的輸出跟正確答案擺在一起。橫軸是真實的最短步數，縱軸是網路猜的；
+      橘色帶子是 ±1 個標準差。線大致貼著對角線，代表它確實學到了「距離」這件事，
+      不是背下某幾個局面。
+    </p>
+    <p class="en">
+      Plot the network's output against the truth: x is the true optimal distance, y is what the network
+      says, and the orange band is ±1 standard deviation. The line tracks the diagonal, which means it did
+      learn distance rather than memorise particular states.
+    </p>
+    <figure class="figure">
+      <div class="legend">
+        <span><i style="background:var(--truth)"></i><span class="zh">完全準的話會落在這條線上</span><span class="en">perfect would sit on this line</span></span>
+        <span><i style="background:var(--estimate)"></i><span class="zh">網路的平均輸出 ±1σ</span><span class="en">network mean ±1σ</span></span>
+      </div>
+      <canvas id="cErr" width="900" height="420"></canvas>
+      <figcaption class="zh">
+        兩端各有一個系統性偏差：很近的局面被高估、很遠的局面被低估。
+        這是回歸模型往平均縮的老毛病，不是訓練不夠——加再多步也不會消失，
+        它是「用一個平方誤差去逼近一個有雜訊的目標」的必然結果。
+      </figcaption>
+      <figcaption class="en">
+        Both ends bend toward the middle: near states are over-estimated, far states under-estimated.
+        That is regression-to-the-mean, not undertraining — more steps will not remove it. It is what
+        fitting a squared-error objective to a noisy target does.
+      </figcaption>
+    </figure>
+    <div class="stats" id="heurStats"></div>
+    <p style="margin-top:26px" class="zh">
+      最後那個數字才是重點：<strong>如果不搜尋</strong>，每一步就挑網路覺得最近的子節點走，
+      解開率只有那樣。也就是說——<strong>這個網路自己解不開魔術方塊。</strong>
+    </p>
+    <p style="margin-top:26px" class="en">
+      The last number is the one that matters: <strong>without search</strong>, walking greedily to whichever
+      child the network likes best, that's the solve rate. Which is to say —
+      <strong>this network cannot solve a Rubik's cube.</strong>
+    </p>
+  </div>
+</section>
+
+<!-- ═══ 搜尋 ═══ -->
+<section>
+  <div class="gauge"><div class="tick">
+    <div class="k" id="gNodes">–</div>
+    <div class="kl zh">加權 A* 平均展開的節點數<br>（在 367 萬個局面裡）</div>
+    <div class="kl en">nodes expanded per solve, out of 3.67 million states</div>
+  </div></div>
+  <div class="body">
+    <h2 class="zh">另外一半：搜尋</h2>
+    <h2 class="en">The other half: search</h2>
+    <p class="zh">
+      同一個解不開方塊的網路，配上加權 A*，解開率 100%。排序的分數只有一行：
+    </p>
+    <p class="en">
+      The same network that can't solve a cube, wrapped in weighted A*, solves 100% of them.
+      The whole ranking rule is one line:
+    </p>
+    <p style="text-align:center"><code style="font-size:15.5px;padding:8px 14px;display:inline-block">f = weight × <span class="zh">已走步數</span><span class="en">moves so far</span> + h(s)</code></p>
+    <p class="zh">
+      heuristic 不需要準，只要方向大致對，搜尋就會把細節補回來。這就是為什麼「學價值」比
+      「學策略」在這題上合理：一個 90% 正確的策略走 20 步，全對的機率只有 12%，錯一步就前功盡棄；
+      而一個「大概準」的距離估計配上搜尋，錯了可以退回來重試。
+    </p>
+    <p class="en">
+      The heuristic doesn't need to be right, only to point roughly the right way; search fills in the rest.
+      That's why learning value beats learning policy here: a policy that's 90% correct over 20 moves is
+      fully correct only 12% of the time, and one wrong move throws the whole thing away. A roughly-correct
+      distance estimate plus search can back up and try again.
+    </p>
+
+    <h3 style="margin-top:34px" class="zh">weight：唯一的旋鈕</h3>
+    <h3 style="margin-top:34px" class="en">weight: the only knob</h3>
+    <div class="scroller"><table>
+      <thead><tr>
+        <th>weight</th>
+        <th><span class="zh">解開率</span><span class="en">solved</span></th>
+        <th><span class="zh">剛好是最短解</span><span class="en">provably optimal</span></th>
+        <th><span class="zh">平均步數</span><span class="en">mean moves</span></th>
+        <th><span class="zh">展開節點</span><span class="en">nodes</span></th>
+        <th><span class="zh">每顆耗時</span><span class="en">ms / cube</span></th>
+      </tr></thead>
+      <tbody id="wRows"></tbody>
+    </table></div>
+    <p class="zh">
+      直覺會說：weight 調到 0 就是純貪婪，最快，但解最長。<strong>後半對，前半錯。</strong>
+      weight=0 的解平均要 <span class="num" id="w0len"></span> 步（最短解只要
+      <span class="num" id="truMean"></span> 步），而且它展開的節點<strong>比中間那個設定還多</strong>：
+      <span class="num" id="w0n"></span> vs <span class="num" id="w6n"></span>。
+      一路往網路覺得近的方向衝，會衝進死路，繞出來的成本比一開始就多想兩步還貴。
+      真正的甜蜜點在中間。
+    </p>
+    <p class="en">
+      Intuition says weight 0 is pure greed: fastest, longest solutions. <strong>The second half is right;
+      the first half is not.</strong> At weight 0 the solutions average
+      <span class="num" id="w0len2"></span> moves against an optimum of
+      <span class="num" id="truMean2"></span> — and it expands <strong>more</strong> nodes than the
+      balanced setting, <span class="num" id="w0n2"></span> against
+      <span class="num" id="w6n2"></span>. Charging at whatever looks closest walks into dead ends, and
+      backing out of them costs more than thinking two moves further ahead would have.
+      The sweet spot is in the middle.
+    </p>
+    <p class="cap zh">
+      這個歸因另外驗過。A* 還有一個經典陷阱：終點如果在「產生子節點」時就判定、而不是等它被「展開」，
+      那即使 heuristic 完全 admissible 也可能回傳非最短解。兩種寫法都跑過同樣 500 個局面——
+      最短解率都是 99.2%，而且失敗的是<strong>同樣那 4 個局面</strong>，所以跟判定時機無關。
+      另外，那 4 個全都剛好多 <strong>2</strong> 步而不是 1 步：每一次四分之一轉都是角塊的一個
+      4-循環（奇置換），所以任何一條解的長度必定跟最短解同奇偶。走偏只會偏偶數步。
+    </p>
+    <p class="cap en">
+      That attribution was checked separately. A* has another classic trap: testing for the goal when a
+      child is <em>generated</em> rather than when it is <em>expanded</em> can return a non-optimal solution
+      even with a perfectly admissible heuristic. Both variants were run over the same 500 states — both
+      score 99.2%, and both fail on <strong>the same four states</strong>, so timing is not the cause.
+      Those four also overshoot by exactly <strong>2</strong> moves, never 1: every quarter turn is a
+      4-cycle on the corners, an odd permutation, so any solution's length has the same parity as the
+      optimum. Going wrong can only go wrong by an even number of moves.
+    </p>
+
+    <h3 style="margin-top:34px" class="zh">一個不該有影響、但影響很大的參數</h3>
+    <h3 style="margin-top:34px" class="en">A parameter that shouldn't matter, and does</h3>
+    <p class="zh">
+      「一次拿幾個節點出來展開」（batch）純粹是為了餵飽 GPU——一次只評估一個局面，
+      GPU 就在空轉。照理說它不該影響搜尋結果。但 2×2×2 的整棵搜尋樹才幾十到一兩千個節點：
+      batch 一大，每一輪就把整個佇列彈光，優先順序根本沒機會發揮，搜尋<strong>退化成 BFS</strong>。
+    </p>
+    <p class="en">
+      "How many nodes to pop per round" (batch) exists purely to keep the GPU busy — evaluating one
+      state at a time leaves it idle. It should not affect what the search finds. But a 2×2×2 search tree
+      is only tens to a couple of thousand nodes wide: make the batch large enough and every round drains
+      the whole queue, the priority order never gets to act, and the search <strong>degenerates into BFS</strong>.
+    </p>
+    <div class="scroller"><table>
+      <thead><tr>
+        <th>batch</th><th>w=0.0</th><th>w=0.3</th><th>w=0.6</th><th>w=1.0</th>
+        <th><span class="zh">展開節點（w=0.6）</span><span class="en">nodes (w=0.6)</span></th>
+      </tr></thead>
+      <tbody id="ablRows"></tbody>
+    </table></div>
+    <p class="cap zh">
+      表中數字是<strong>最短解率</strong>。batch=200 那一列四個 weight 完全相同，
+      而且花了 <span class="num" id="ablCost"></span> 倍的節點——那不是 A*，那是一個很貴的 BFS。
+      所以這個專案的 2×2×2 用 batch=1（就是課本上的 A*）；3×3×3 的樹夠大，大批次才划算。
+    </p>
+    <p class="cap en">
+      The cells are <strong>optimal-solution rate</strong>. In the batch=200 row all four weights are
+      identical — at <span class="num" id="ablCost2"></span>× the nodes. That isn't A*, it's an expensive
+      breadth-first search. So the 2×2×2 here runs at batch=1, plain textbook A*; only the 3×3×3's tree
+      is wide enough to pay for a big batch.
+    </p>
+
+    <div class="callout">
+      <h3 class="zh">那個「保證最短解」本來就沒有</h3>
+      <h3 class="en">The optimality guarantee was never there</h3>
+      <p class="zh">
+        weight=1 就是課本上的 A*，定理說它保證找到最短解。實測是
+        <span class="num" id="w1opt"></span>，不是 100%。差的那一點不是實作有錯，
+        是<strong>定理的前提沒滿足</strong>：保證成立的條件是 heuristic 不能高估，
+        而這個學出來的東西有 <span class="num" id="overRate"></span> 的局面高估了。
+        既然保證本來就不成立，把 weight 調低換速度反而是誠實的選擇。
+        <strong>而這整件事只有在手上有正確答案的時候才驗證得了</strong>——3×3×3 那邊只能猜。
+      </p>
+      <p class="en">
+        Weight 1 is textbook A*, which the theorem says returns an optimal solution. Measured, it returns
+        one <span class="num" id="w1opt2"></span> of the time — not 100%. The gap is not an implementation
+        bug; it is <strong>the theorem's precondition failing</strong>: optimality requires that the
+        heuristic never over-estimate, and this learned one over-estimates on
+        <span class="num" id="overRate2"></span> of sampled states. Since the guarantee doesn't hold anyway,
+        trading it for speed is the honest move. <strong>And none of this is checkable without ground
+        truth</strong> — on a 3×3×3 it would all be a guess.
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ 放大 ═══ -->
+<section>
+  <div class="gauge"><div class="tick">
+    <div class="k" style="font-size:19px">43,252,003,<br>274,489,<br>856,000</div>
+    <div class="kl zh">3×3×3 的局面數<br>一個局面一奈秒，也要一千三百七十億年</div>
+    <div class="kl en">3×3×3 states — one nanosecond each would take 137 billion years</div>
+  </div></div>
+  <div class="body">
+    <h2 class="zh">同一份程式，換成三階</h2>
+    <h2 class="en">Same code, bigger cube</h2>
+    <p class="zh">
+      貼紙從 24 片變 54 片，轉法從 6 種變 12 種，局面數從三百六十七萬變成四千三百二十五京。
+      程式碼一行沒改，只有 <code>shared/config.json</code> 裡的網路變大、訓練變久。
+    </p>
+    <p class="en">
+      Stickers go from 24 to 54, moves from 6 to 12, states from 3.67 million to 43 quintillion.
+      Not a line of code changes — only the network size and training length in <code>shared/config.json</code>.
+    </p>
+    <p class="zh">
+      但有一件事永遠回不來了：<strong>正確答案</strong>。三階的上帝之數是 26（四分之一轉），
+      可是沒有人能對一個隨手打亂的方塊說出它精確的最短解，除非跑一次大到不可能的搜尋。
+      所以到這裡只剩兩個問題可以問：解得開嗎？幾步？
+    </p>
+    <p class="en">
+      One thing is gone for good: <strong>the ground truth</strong>. God's number for the 3×3×3 is 26 in
+      quarter turns, but nobody can name the exact optimal solution for an arbitrary scramble without a
+      search that is out of reach. Only two questions survive: does it solve, and in how many moves?
+    </p>
+    <p class="zh">
+      結果是<strong>每一個深度都 100%</strong>，包含完全隨機的 30 步打亂——
+      平均 <span class="num" id="d3len"></span> 步、展開 <span class="num" id="d3nodes"></span> 個節點、
+      不到一秒一顆。對照組是 1,000 個局面各亂轉一萬步：解開 0 個。
+    </p>
+    <p class="en">
+      Every depth comes out at <strong>100%</strong>, fully random 30-move scrambles included —
+      <span class="num" id="d3len2"></span> moves on average,
+      <span class="num" id="d3nodes2"></span> nodes expanded, under a second per cube.
+      The control, a thousand cubes turned ten thousand times at random, solved none.
+    </p>
+    <div class="scroller"><table>
+      <thead><tr>
+        <th><span class="zh">打亂步數</span><span class="en">scramble depth</span></th>
+        <th><span class="zh">解開率</span><span class="en">solved</span></th>
+        <th><span class="zh">平均步數</span><span class="en">mean moves</span></th>
+        <th><span class="zh">展開節點</span><span class="en">nodes</span></th>
+        <th><span class="zh">每顆耗時</span><span class="en">ms / cube</span></th>
+      </tr></thead>
+      <tbody id="d3Rows"></tbody>
+    </table></div>
+    <p class="zh" style="margin-top:24px">
+      但這裡有個東西值得多看一眼：網路對「很遠的局面」一律回答 <strong>14 左右</strong>，
+      而它們的真實距離其實在 20 以上。這跟 2×2×2 那張圖上看到的往平均縮是同一個現象，
+      只是三階嚴重得多——所以深的局面才要展開三萬個節點。
+      <strong>搜尋等於在替 heuristic 補那 6 步的落差。</strong>
+      2×2×2 那邊能精確說出落差是多少；這邊只能從節點數反推。
+    </p>
+    <p class="en" style="margin-top:24px">
+      One thing is worth a second look: for far-away states the network answers about
+      <strong>14</strong>, while their true distance is north of 20. It is the same
+      regression-to-the-mean seen in the 2×2×2 chart, only far worse — which is exactly why deep
+      scrambles cost thirty thousand nodes. <strong>The search is paying off the heuristic's
+      six-move shortfall.</strong> On the 2×2×2 that shortfall can be stated exactly; here it can
+      only be inferred from the node count.
+    </p>
+    <p class="cap zh" id="note3"></p>
+    <p class="cap en" id="note3e"></p>
+  </div>
+</section>
+
+<!-- ═══ 坑 ═══ -->
+<section class="pits">
+  <div class="gauge"><div class="tick">
+    <div class="k" style="font-size:20px"><span class="zh">五個坑</span><span class="en">Five pitfalls</span></div>
+    <div class="kl zh">都不會噴錯，這才是麻煩的地方</div>
+    <div class="kl en">none of them throws an error — that's the problem</div>
+  </div></div>
+  <div class="body">
+    <h2 class="zh">踩過的五個坑</h2>
+    <h2 class="en">Five things that went wrong</h2>
+
+    <div class="callout pit">
+      <h3 class="zh">照論文抄門檻，訓練會靜悄悄地停住</h3>
+      <h3 class="en">Copying the paper's threshold silently halts training</h3>
+      <p class="zh">
+        DAVI 的 target 更新規則是「loss 掉到門檻以下，才把 target 網路往前推一版」。
+        論文那個門檻（0.05）放到我這個比較小的網路上，loss 根本掉不到——
+        12,000 輪裡 target 只推了 10 版就再也不動，最好只到 MAE 1.35。
+        而訓練看起來完全正常：還在跑、loss 還在慢慢降、什麼錯都沒噴。
+        門檻放寬到 0.15 之後，同樣 12,000 輪推了 34 版，MAE 1.13。
+        同樣的程式、同樣的步數，差別只有那一個數字。
+        現在程式裡多了一條保險：連續幾次檢查都沒推，就強制推一版。
+      </p>
+      <p class="en">
+        DAVI advances its target network only once the loss drops below a threshold. The paper's value
+        (0.05), applied to this smaller network, sits below the loss floor — so across 12,000 iterations the
+        target advanced 10 times and then never again, bottoming out at an MAE of 1.35. Training looked
+        perfectly healthy throughout: still running, loss still drifting down, no error anywhere. Loosening
+        the threshold to 0.15 gave 34 target updates over the same 12,000 iterations and an MAE of 1.13.
+        Same code, same number of steps; one number different. There is now a fuse: after N checks with no
+        update, advance anyway.
+      </p>
+    </div>
+
+    <div class="callout pit">
+      <h3 class="zh">「平均差一步」聽起來很好，其實只比亂猜好一點</h3>
+      <h3 class="en">"Off by one move" sounds good until you check the baseline</h3>
+      <p class="zh">
+        這個問題八成以上的答案落在 10 到 12 之間。所以在報準確度之前一定要先問：
+        一個什麼都不看、永遠回答 11 的模型，誤差是多少？沒有這條底線，
+        任何「MAE 很小」的宣稱都不成立。真正該看的是它在兩端有沒有跟著動，
+        以及高估率——因為那決定 A* 還有沒有最短解的保證。
+      </p>
+      <p class="en">
+        Over 80% of answers here fall between 10 and 12. So before quoting an accuracy figure, ask what a
+        model that ignores its input and always says "11" would score. Without that baseline no
+        "the MAE is small" claim means anything. What actually matters is whether the estimate moves at
+        the extremes, and the over-estimation rate — because that's what decides whether A* still has any
+        optimality guarantee left.
+      </p>
+    </div>
+
+    <div class="callout pit">
+      <h3 class="zh">一個「效能參數」把演算法換掉了</h3>
+      <h3 class="en">A "performance knob" quietly replaced the algorithm</h3>
+      <p class="zh">
+        第一次跑 weight 對照，四個 weight 跑出<strong>一模一樣</strong>的解開率、步數、節點數——
+        連小數點後兩位都一樣。看起來像 weight 沒接上去，但程式是對的。
+        真正的原因是批次大小：批次 200、整棵樹才一千多個節點，每一輪都把佇列彈光，
+        優先佇列等於不存在。一個純粹為了 GPU 利用率而設的參數，
+        把演算法從 A* 換成了 BFS，而且沒有任何跡象。
+        會抓到只是因為「四個數字一模一樣」太可疑了——如果它們只是接近，大概就這樣過去了。
+      </p>
+      <p class="en">
+        The first weight sweep returned <strong>identical</strong> solve rates, lengths and node counts for
+        all four weights — matching to two decimal places. It looked like the weight wasn't wired up.
+        The code was fine. The cause was the batch size: with batch 200 against a tree of about a thousand
+        nodes, every round drained the queue and the priority order never applied. A knob that exists only
+        for GPU utilisation had swapped A* for BFS, silently. It got caught only because four identical
+        numbers are too suspicious to ignore — had they merely been close, it would have shipped.
+      </p>
+    </div>
+
+    <div class="callout pit">
+      <h3 class="zh">沒有正確答案，連「挑哪個 checkpoint」都會挑錯</h3>
+      <h3 class="en">Without ground truth, even picking a checkpoint goes wrong</h3>
+      <p class="zh">
+        2×2×2 有精確答案，「哪一版最好」直接用 MAE 決定。3×3×3 沒有，就退而求其次用 loss——
+        於是存下來的「最佳」權重是<strong>第 2,000 輪</strong>那一版。
+        因為 DAVI 訓練最初期的 loss 就是最低的：那時候 target 網路幾乎是個常數，
+        「猜一個固定的數字」當然很好擬合。這個標準挑的是「最什麼都還沒學會」的那一版，
+        而且它一路蓋掉了後面四萬五千輪的成果。會抓到，是因為去看了一眼 checkpoint 裡的輪數。
+        這一條跟整頁的主題其實是同一件事：<strong>沒有 ground truth，少掉的不只是
+        「它有多準」，連「哪一版比較好」都跟著不見。</strong>
+      </p>
+      <p class="en">
+        On the 2×2×2, "which version is best" is settled by MAE against exact truth. The 3×3×3 has none,
+        so the fallback was loss — and the checkpoint saved as "best" turned out to be from
+        <strong>iteration 2,000</strong>. DAVI's loss is at its lowest right at the start, because the
+        target network is then almost a constant and predicting a fixed number fits beautifully. The
+        criterion selects the version that has learned the least, and then keeps overwriting forty-five
+        thousand iterations of progress with it. It surfaced only from glancing at the iteration number
+        stored in the file. Which is the same lesson as the rest of this page:
+        <strong>without ground truth you lose more than "how accurate is it" — you lose
+        "which one is better" too.</strong>
+      </p>
+    </div>
+
+    <div class="callout pit">
+      <h3 class="zh">把「取樣打亂 k 步」當成「距離 k」</h3>
+      <h3 class="en">Confusing "scrambled k moves" with "k moves away"</h3>
+      <p class="zh">
+        亂轉 14 步的方塊，真實距離往往遠小於 14——繞回來了。用「亂轉 k 步」抽出來的局面去做
+        benchmark，會系統性偏向簡單的局面，數字自然好看。既然整張距離表都算出來了，
+        2×2×2 的評估就該從全部 3,674,160 個裡<strong>均勻抽</strong>。這頁上的 2×2×2 數字都是這樣抽的。
+        3×3×3 沒有這個選項，所以那張表只能照打亂深度分組——並且明講這件事。
+      </p>
+      <p class="en">
+        A cube scrambled 14 moves is usually much closer than 14 — the walk loops back. Benchmarking on
+        states drawn by "scramble k moves" quietly biases toward easy states and flatters the numbers.
+        Since the full distance table exists, the 2×2×2 evaluation samples <strong>uniformly</strong> from
+        all 3,674,160 states, which is what every 2×2×2 figure on this page does. The 3×3×3 has no such
+        option, so its table is grouped by scramble depth — and says so.
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ 結果 ═══ -->
+<section>
+  <div class="gauge"><div class="tick">
+    <div class="k" id="gOpt">–</div>
+    <div class="kl zh">A* 給的解<br>剛好就是最短解的比例</div>
+    <div class="kl en">share of A* solutions that are provably optimal</div>
+  </div></div>
+  <div class="body">
+    <h2 class="zh">實測</h2>
+    <h2 class="en">Measured</h2>
+    <p class="zh"><span class="num" id="n2"></span> 個局面，從全部 3,674,160 個裡均勻抽，所有 policy 共用同一組。</p>
+    <p class="en"><span class="num" id="n2e"></span> states sampled uniformly from all 3,674,160; every policy sees the same set.</p>
+    <div class="scroller"><table>
+      <thead><tr>
+        <th>policy</th>
+        <th><span class="zh">解開率</span><span class="en">solved</span></th>
+        <th><span class="zh">最短解率</span><span class="en">optimal</span></th>
+        <th><span class="zh">平均步數</span><span class="en">mean moves</span></th>
+        <th><span class="zh">展開節點</span><span class="en">nodes</span></th>
+      </tr></thead>
+      <tbody id="b2Rows"></tbody>
+    </table></div>
+
+    <p style="margin-top:30px" class="zh">
+      最後留一句。前面五個專案，網路學的都是「要做什麼」。這個專案的網路什麼都不會做，
+      它只會判斷「這裡離終點多遠」。把判斷跟決策拆開，才是這一整套方法能從
+      三百萬個局面搬到四千三百二十五京個局面的原因。
+    </p>
+    <p style="margin-top:30px" class="en">
+      One closing note. In the previous five labs the network learned what to do. Here it does nothing at
+      all — it only judges how far away something is. Separating judgment from decision is precisely what
+      lets the same method carry from three million states to forty-three quintillion.
+    </p>
+  </div>
+</section>
+
+<div class="foot">
+  <div class="links">
+    <a href="https://github.com/twoutlook/lab-ml-006" target="_blank" rel="noopener">GitHub · lab-ml-006</a>
+    <!--YT_START2--><a href="__YT_URL__" target="_blank" rel="noopener"><span class="zh">影片版</span><span class="en">Video</span></a><!--YT_END2-->
+  </div>
+  <p class="zh" style="margin:0">
+    全部手寫：轉動表從 3D 座標算出來、環境是 numpy、網路是小的 residual MLP、搜尋是自己寫的批次加權 A*。
+    沒有 Gym、沒有 Stable-Baselines3、瀏覽器端沒有 TensorFlow.js。
+    <span id="footMeta"></span>
+  </p>
+  <p class="en" style="margin:0">
+    Everything hand-written: move tables derived from 3D geometry, a numpy environment, a small residual
+    MLP, a hand-rolled batched weighted A*. No Gym, no Stable-Baselines3, no TensorFlow.js in the browser.
+    <span id="footMetaE"></span>
+  </p>
+  <p style="margin:14px 0 0" class="dim">MarkLuce AI · Claude Code · Claude Opus 5</p>
+</div>
+</div>
+
+<script>
+const DATA = /*__DATA__*/;
+const POLICY = /*__POLICY__*/;
+</script>
+<script type="module">
+/*__ENGINE__*/
+
+// ── 語言切換 ────────────────────────────────────────────────
+const $ = (id) => document.getElementById(id);
+function setLang(l) {
+  document.documentElement.setAttribute("data-lang", l);
+  $("lz").setAttribute("aria-pressed", String(l === "zh"));
+  $("le").setAttribute("aria-pressed", String(l === "en"));
+  paint();
+}
+$("lz").onclick = () => setLang("zh");
+$("le").onclick = () => setLang("en");
+
+const fmt = (n) => n.toLocaleString("en-US");
+const pct = (v, d = 1) => `${(v * 100).toFixed(d)}%`;
+const isEn = () => document.documentElement.getAttribute("data-lang") === "en";
+const T = (zh, en) => (isEn() ? en : zh);
+const css = (k) => getComputedStyle(document.documentElement).getPropertyValue(k).trim();
+
+// ── 靜態數字 ────────────────────────────────────────────────
+const H = DATA.heuristic, B2 = DATA.bench2, B3 = DATA.bench3;
+const AST = B2.rows.filter((r) => r.name.startsWith("加權 A*"));
+const BEST = AST.reduce((a, b) => (b.optimal_rate > a.optimal_rate ? b : a));
+const DEF = AST.find((r) => r.name.includes("0.6")) || BEST;
+const peak = (DATA.hist[10] + DATA.hist[11] + DATA.hist[12]) / DATA.total2;
+
+$("gRand").textContent = pct(DATA.randomStats["3"].solve_rate, 1);
+$("gMae").textContent = H.mae.toFixed(2);
+$("gNodes").textContent = fmt(Math.round(DEF.mean_nodes));
+$("gOpt").textContent = pct(BEST.optimal_rate);
+$("peakShare").textContent = pct(peak);
+$("peakShare2").textContent = pct(peak);
+$("overRate").textContent = pct(H.over_rate);
+$("overRate2").textContent = pct(H.over_rate);
+const W0 = DATA.weights.find((r) => r.w === 0), W6 = DATA.weights.find((r) => r.w === 0.6);
+const W1 = DATA.weights.find((r) => r.w === 1);
+for (const [id, v] of [["w0len", W0.mean_len.toFixed(1)], ["w0len2", W0.mean_len.toFixed(1)],
+  ["truMean", B2.truth_mean.toFixed(2)], ["truMean2", B2.truth_mean.toFixed(2)],
+  ["w0n", Math.round(W0.mean_nodes)], ["w0n2", Math.round(W0.mean_nodes)],
+  ["w6n", Math.round(W6.mean_nodes)], ["w6n2", Math.round(W6.mean_nodes)],
+  ["w1opt", pct(W1.optimal_rate)], ["w1opt2", pct(W1.optimal_rate)]]) $(id).textContent = v;
+$("n2").textContent = fmt(B2.n);
+$("n2e").textContent = fmt(B2.n);
+
+function paint() {
+  const greedy = DATA.greedy2;
+  $("heroStats").innerHTML = [
+    [pct(DEF.solve_rate, 0), T("2×2×2 解開率（A* + 網路）", "2×2×2 solved, A* + network"), "tru"],
+    [pct(BEST.optimal_rate), T("其中剛好是最短解", "of those, provably optimal"), "tru"],
+    [pct(greedy), T("只用網路、不搜尋的解開率", "network alone, no search"), "est"],
+    [H.mae.toFixed(2), T("平均差幾步（對精確答案）", "mean error vs exact truth"), "est"],
+    [fmt(POLICY.n_params), T("2×2×2 網路的參數量", "parameters, 2×2×2 network"), ""],
+  ].map(([v, l, c]) => `<div class="stat"><b class="${c}">${v}</b><span>${l}</span></div>`).join("");
+
+  $("heurStats").innerHTML = [
+    [H.mae.toFixed(2), T("平均差幾步", "mean absolute error"), "est"],
+    [pct(H.within_1), T("誤差在 1 步以內", "within 1 move"), "est"],
+    [pct(H.over_rate), T("高估（A* 的保證因此失效）", "over-estimated (kills A*'s guarantee)"), "est"],
+    [pct(DATA.greedy2), T("不搜尋的解開率", "solve rate without search"), "est"],
+  ].map(([v, l, c]) => `<div class="stat"><b class="${c}">${v}</b><span>${l}</span></div>`).join("");
+
+  $("cmpRows").innerHTML = [
+    [T("玩很多局，把經驗存進 replay buffer", "play episodes, store them in a replay buffer"),
+     T("從解開狀態往回亂轉，直接造資料", "walk backwards from solved; data is manufactured")],
+    [T("要 epsilon 才探索得到新東西", "needs epsilon to see anything new"),
+     T("沒有探索這回事", "there is no exploration")],
+    [T("學 policy 或 Q（每個動作一個值）", "learns a policy or Q (one value per action)"),
+     T("學 value（一個局面一個數字）", "learns a value (one number per state)")],
+    [T("target 沿著行為策略回傳，爛策略會帶壞它", "target follows the behaviour policy; a weak one poisons it")
+      , T("target 取所有子節點的最小值，跟策略無關", "target is a min over all children; policy-free")],
+    [T("推論時直接照著 policy 走", "inference just follows the policy"),
+     T("推論時跑一次 A* 搜尋", "inference runs an A* search")],
+  ].map(([a, b]) => `<tr><td>${a}</td><td style="text-align:left">${b}</td></tr>`).join("");
+
+  $("wRows").innerHTML = DATA.weights.map((r) => `<tr${r.w === 0.6 ? ' class="hl"' : ""}>
+    <td class="n">${r.w.toFixed(1)}</td><td class="n">${pct(r.solve_rate, 0)}</td>
+    <td class="n">${pct(r.optimal_rate)}</td><td class="n">${r.mean_len.toFixed(2)}</td>
+    <td class="n">${fmt(Math.round(r.mean_nodes))}</td><td class="n">${Math.round(r.ms)}</td></tr>`).join("");
+
+  $("b2Rows").innerHTML = B2.rows.map((r) => {
+    const hl = r.name.startsWith("加權 A*") ? ' class="hl"' : (r.name.includes("BFS") ? ' class="gt"' : "");
+    const nm = isEn() ? ({ "亂轉 random": "random turning",
+      "貪婪（只用網路，不搜尋）": "greedy (network only, no search)",
+      "最短解（全狀態 BFS，沒有 ML）": "optimal (full BFS, no ML)" }[r.name]
+      || r.name.replace("加權 A*（weight=", "weighted A* (weight=").replace("）", ")")) : r.name;
+    return `<tr${hl}><td>${nm}</td><td class="n">${pct(r.solve_rate, 1)}</td>
+      <td class="n">${r.optimal_rate == null ? "—" : pct(r.optimal_rate)}</td>
+      <td class="n">${r.mean_len == null ? "—" : r.mean_len.toFixed(2)}</td>
+      <td class="n">${fmt(Math.round(r.mean_nodes))}</td></tr>`;
+  }).join("");
+
+  $("d3Rows").innerHTML = B3.by_depth.map((r) => `<tr><td class="n">${r.depth}</td>
+    <td class="n">${pct(r.solve_rate, 0)}</td>
+    <td class="n">${r.mean_len == null ? "—" : r.mean_len.toFixed(1)}</td>
+    <td class="n">${fmt(Math.round(r.mean_nodes))}</td>
+    <td class="n">${Math.round(r.ms_per_cube)}</td></tr>`).join("");
+
+  const A = DATA.batchAblation;
+  if (A) {
+    const bs = [...new Set(A.rows.map((r) => r.batch))];
+    const ws = [...new Set(A.rows.map((r) => r.weight))];
+    const get = (b, w) => A.rows.find((r) => r.batch === b && r.weight === w);
+    $("ablRows").innerHTML = bs.map((b) => {
+      const cells = ws.map((w) => {
+        const r = get(b, w);
+        return `<td class="n">${r ? pct(r.optimal_rate, 1) : "—"}</td>`;
+      }).join("");
+      const mid = get(b, 0.6);
+      return `<tr${b === 1 ? ' class="hl"' : ""}><td class="n">${b}</td>${cells}
+        <td class="n">${mid ? fmt(Math.round(mid.mean_nodes)) : "—"}</td></tr>`;
+    }).join("");
+    const small = get(bs[0], 0.6), big = get(bs[bs.length - 1], 0.6);
+    const ratio = big && small ? (big.mean_nodes / small.mean_nodes).toFixed(0) : "?";
+    $("ablCost").textContent = ratio;
+    $("ablCost2").textContent = ratio;
+  }
+
+  const deep = B3.by_depth[B3.by_depth.length - 1];
+  for (const [id, v] of [["d3len", deep.mean_len.toFixed(1)], ["d3len2", deep.mean_len.toFixed(1)],
+    ["d3nodes", fmt(Math.round(deep.mean_nodes))], ["d3nodes2", fmt(Math.round(deep.mean_nodes))]]) {
+    const el = $(id); if (el) el.textContent = v;
+  }
+  $("note3").textContent = `每個深度 ${B3.n} 個局面，weight=${B3.weight}，節點上限 ${fmt(B3.max_nodes)}。`
+    + `打亂 k 步的真實距離往往小於 k，所以這張表不能當成「距離 k 的解開率」。`
+    + `對照組：亂轉一萬步的解開率 ${pct(B3.random_walk_solve_rate, 1)}。`;
+  $("note3e").textContent = `${B3.n} states per depth, weight=${B3.weight}, node cap ${fmt(B3.max_nodes)}. `
+    + `A cube scrambled k moves is usually closer than k, so this is not a "solve rate at distance k" table. `
+    + `Control: ${pct(B3.random_walk_solve_rate, 1)} after 10,000 random turns.`;
+
+  const meta = T(
+    `2×2×2 網路 ${fmt(POLICY.n_params)} 參數，練了 ${fmt(POLICY.trained_iters)} 輪；權重把 BatchNorm 摺進線性層後匯出成 JSON。`,
+    `The 2×2×2 network has ${fmt(POLICY.n_params)} parameters, trained for ${fmt(POLICY.trained_iters)} iterations; BatchNorm is folded into the linear layers before export.`);
+  $("footMeta").textContent = isEn() ? "" : meta;
+  $("footMetaE").textContent = isEn() ? meta : "";
+  $("netmeta").textContent = `${fmt(POLICY.n_params)} params · MAE ${H.mae.toFixed(2)}`;
+
+  drawHist(); drawErr(); tol();
+}
+
+// ── 圖：距離分布 ────────────────────────────────────────────
+function fitCanvas(c) {
+  const r = window.devicePixelRatio || 1;
+  const w = c.clientWidth || c.width;
+  const h = Math.round((w * c.height) / c.width);
+  c.width = Math.round(w * r); c.height = Math.round(h * r);
+  c.style.height = h + "px";
+  const x = c.getContext("2d");
+  x.setTransform(r, 0, 0, r, 0, 0);
+  x.clearRect(0, 0, w, h);
+  return [x, w, h];
+}
+function drawHist() {
+  const c = $("cHist"); c.width = 900; c.height = 360;
+  const [x, W, Hh] = fitCanvas(c);
+  const hist = DATA.hist, max = Math.max(...hist);
+  const L = 44, Rr = 12, Tt = 16, Bb = 42;
+  const bw = (W - L - Rr) / hist.length;
+  x.font = '11px "IBM Plex Mono", monospace';
+  x.strokeStyle = css("--line-soft"); x.lineWidth = 1;
+  for (let g = 0; g <= 4; g++) {
+    const y = Tt + ((Hh - Tt - Bb) * g) / 4;
+    x.beginPath(); x.moveTo(L, y + .5); x.lineTo(W - Rr, y + .5); x.stroke();
+    x.fillStyle = css("--faint"); x.textAlign = "right";
+    x.fillText(((max * (4 - g)) / 4 / 1000).toFixed(0) + "k", L - 8, y + 4);
+  }
+  hist.forEach((v, d) => {
+    const h = ((Hh - Tt - Bb) * v) / max;
+    x.fillStyle = d >= 10 && d <= 12 ? css("--estimate") : css("--truth");
+    x.globalAlpha = d >= 10 && d <= 12 ? 1 : .55;
+    x.fillRect(L + d * bw + 2, Hh - Bb - h, bw - 4, h);
+    x.globalAlpha = 1;
+    x.fillStyle = d === 14 ? css("--ink") : css("--faint"); x.textAlign = "center";
+    x.fillText(String(d), L + d * bw + bw / 2, Hh - Bb + 17);
+  });
+  x.fillStyle = css("--muted"); x.textAlign = "center";
+  x.font = '12px "Noto Sans TC", system-ui, sans-serif';
+  x.fillText(T("最短還要幾步（上帝之數 14）", "optimal distance in moves (God's number is 14)"), W / 2, Hh - 8);
+}
+
+// ── 圖：估計 vs 真值 ────────────────────────────────────────
+function drawErr() {
+  const c = $("cErr"); c.width = 900; c.height = 420;
+  const [x, W, Hh] = fitCanvas(c);
+  const by = H.by_distance, maxD = 15;
+  const L = 46, Rr = 14, Tt = 14, Bb = 44;
+  const px = (d) => L + ((W - L - Rr) * d) / maxD;
+  const py = (v) => Hh - Bb - ((Hh - Tt - Bb) * v) / maxD;
+  x.font = '11px "IBM Plex Mono", monospace';
+  x.strokeStyle = css("--line-soft");
+  for (let g = 0; g <= maxD; g += 3) {
+    x.beginPath(); x.moveTo(px(g) + .5, Tt); x.lineTo(px(g) + .5, Hh - Bb); x.stroke();
+    x.beginPath(); x.moveTo(L, py(g) + .5); x.lineTo(W - Rr, py(g) + .5); x.stroke();
+    x.fillStyle = css("--faint");
+    x.textAlign = "center"; x.fillText(String(g), px(g), Hh - Bb + 17);
+    x.textAlign = "right"; x.fillText(String(g), L - 8, py(g) + 4);
+  }
+  x.strokeStyle = css("--truth"); x.lineWidth = 1.5; x.setLineDash([6, 5]);
+  x.beginPath(); x.moveTo(px(0), py(0)); x.lineTo(px(maxD), py(maxD)); x.stroke();
+  x.setLineDash([]);
+
+  x.fillStyle = css("--estimate-w");
+  x.beginPath();
+  by.forEach((r, i) => (i ? x.lineTo(px(r.d), py(r.mean_h + r.std_h)) : x.moveTo(px(r.d), py(r.mean_h + r.std_h))));
+  for (let i = by.length - 1; i >= 0; i--) x.lineTo(px(by[i].d), py(by[i].mean_h - by[i].std_h));
+  x.closePath(); x.fill();
+  x.strokeStyle = css("--estimate"); x.lineWidth = 2.5;
+  x.beginPath();
+  by.forEach((r, i) => (i ? x.lineTo(px(r.d), py(r.mean_h)) : x.moveTo(px(r.d), py(r.mean_h))));
+  x.stroke();
+  by.forEach((r) => { x.fillStyle = css("--estimate"); x.beginPath(); x.arc(px(r.d), py(r.mean_h), 3, 0, 7); x.fill(); });
+
+  x.fillStyle = css("--muted"); x.textAlign = "center";
+  x.font = '12px "Noto Sans TC", system-ui, sans-serif';
+  x.fillText(T("真正的最短步數", "true optimal distance"), (L + W - Rr) / 2, Hh - 8);
+  x.save(); x.translate(13, (Tt + Hh - Bb) / 2); x.rotate(-Math.PI / 2);
+  x.fillText(T("網路猜的", "network estimate"), 0, 0); x.restore();
+}
+
+// ── 互動台 ──────────────────────────────────────────────────
+const CUBE = new Cube(MOVES2);
+const NET = new ValueNet(POLICY);
+const VIEW = new CubeView(CUBE, [css("--u"), css("--d"), css("--f"), css("--b"), css("--l"), css("--r")]);
+const cvs = $("cube"), cx2 = cvs.getContext("2d");
+let state = CUBE.solved(), queue = [], anim = null, busy = false, exact = null, hv = null;
+
+$("mvs").innerHTML = "";
+CUBE.moveNames.forEach((n, i) => {
+  const b = document.createElement("button");
+  b.className = "b mv"; b.textContent = n;
+  b.onclick = () => { if (!busy) queue.push(i); };
+  $("mvs").appendChild(b);
+});
+$("depth").oninput = () => { $("dLab").textContent = $("depth").value; };
+$("bReset").onclick = () => { if (busy) return; state = CUBE.solved(); queue = []; $("status").textContent = ""; refresh(); };
+$("bScr").onclick = () => {
+  if (busy) return;
+  state = CUBE.solved(); queue = [];
+  const { seq } = CUBE.scramble(Number($("depth").value));
+  seq.forEach((m) => queue.push(m));
+  $("status").textContent = T("打亂：", "scramble: ") + CUBE.toStr(seq);
+};
+$("bSolve").onclick = async () => {
+  if (busy || CUBE.isSolved(state)) return;
+  busy = true; $("bSolve").disabled = true;
+  const r = await solve(CUBE, NET, state, {
+    weight: 0.6, batch: 1, maxNodes: 60000,   // batch=1 = 課本上的 A*，跟 ml/benchmark.py 一致
+    onProgress: ({ expanded }) => { $("status").textContent = T(`搜尋中… 已展開 ${fmt(expanded)} 個節點`, `searching… ${fmt(expanded)} nodes expanded`); },
+  });
+  busy = false; $("bSolve").disabled = false;
+  if (!r.seq) { $("status").textContent = T("找不到（節點預算用完）", "gave up (node budget)"); return; }
+  const opt = exact != null && r.seq.length === exact;
+  $("status").innerHTML = T(
+    `A* 解出 <b>${r.seq.length} 步</b>${opt ? "，就是最短解" : ""}・展開 ${fmt(r.expanded)} 個節點・${Math.round(r.ms)} ms<br>${CUBE.toStr(r.seq)}`,
+    `A* found <b>${r.seq.length} moves</b>${opt ? " — provably optimal" : ""} · ${fmt(r.expanded)} nodes · ${Math.round(r.ms)} ms<br>${CUBE.toStr(r.seq)}`);
+  r.seq.forEach((m) => queue.push(m));
+};
+
+function refresh() {
+  const done = CUBE.isSolved(state);
+  hv = done ? 0 : NET.value(CUBE, state);
+  const e = exactSolve(CUBE, state);
+  exact = e ? e.dist : null;
+  $("rH").textContent = hv.toFixed(2);
+  $("rE").textContent = exact == null ? "?" : String(exact);
+  tol();
+}
+
+// 公差條：真值一個刻度，估計值一個標記，中間是差距
+function tol() {
+  const t = $("tolTrack");
+  if (hv == null) { t.innerHTML = ""; return; }
+  const max = 15;
+  const p = (v) => `${Math.max(0, Math.min(100, (v / max) * 100))}%`;
+  const lo = Math.min(hv, exact ?? hv), hi = Math.max(hv, exact ?? hv);
+  t.innerHTML =
+    `<div class="tol-band" style="left:${p(lo)};width:${Math.max(0, ((hi - lo) / max) * 100)}%"></div>` +
+    (exact == null ? "" : `<div class="tol-mark t" style="left:${p(exact)}"></div>`) +
+    `<div class="tol-mark e" style="left:${p(hv)}"></div>` +
+    `<div style="position:absolute;top:22px;left:0;right:0;font:500 11.5px 'IBM Plex Mono',monospace;color:var(--muted);display:flex;justify-content:space-between">
+       <span>0</span><span>${exact == null ? "" : (hv - exact >= 0 ? "+" : "") + (hv - exact).toFixed(2)}</span><span>${max}</span></div>`;
+}
+
+const TURN = 190;
+function loop(now) {
+  if (!anim && queue.length) {
+    const m = queue.shift(), nm = CUBE.moveNames[m];
+    anim = { move: m, face: nm[0], dir: nm.endsWith("'") ? 1 : -1, t0: now };
+  }
+  if (anim) {
+    const q = Math.min(1, (now - anim.t0) / TURN);
+    const e = q < .5 ? 2 * q * q : 1 - 2 * (1 - q) * (1 - q);
+    anim.angle = anim.dir * e * Math.PI / 2;
+    if (q >= 1) { state = CUBE.apply(state, anim.move); anim = null; if (!queue.length) refresh(); }
+  }
+  cx2.clearRect(0, 0, cvs.width, cvs.height);
+  VIEW.colors = [css("--u"), css("--d"), css("--f"), css("--b"), css("--l"), css("--r")];
+  VIEW.yaw = -0.62 + Math.sin(now / 5200) * 0.16;
+  VIEW.draw(cx2, state, { cx: 230, cy: 205, scale: 54, anim: anim ? { face: anim.face, angle: anim.angle } : null });
+  const cell = 20, fw = CUBE.n * cell + 3;
+  drawNet(cx2, CUBE, state, VIEW.colors, 230 - 2 * fw, 366, cell, 3);
+  if (CUBE.isSolved(state) && !anim) {
+    cx2.fillStyle = css("--truth");
+    cx2.font = '600 14px "Noto Sans TC", system-ui, sans-serif';
+    cx2.textAlign = "center";
+    cx2.fillText(T("解開了", "solved"), 230, 516);
+  }
+  requestAnimationFrame(loop);
+}
+
+setLang("zh");
+refresh();
+requestAnimationFrame(loop);
+window.addEventListener("resize", () => { drawHist(); drawErr(); });
+</script>
