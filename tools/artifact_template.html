@@ -200,7 +200,7 @@ html[data-lang="en"] .pit h3::before { content: "pitfall " counter(pit); }
 .bench-head .t { font-family: "IBM Plex Mono", monospace; font-size: 11.5px; letter-spacing: .16em; text-transform: uppercase; color: var(--muted); }
 .bench-body { display: grid; grid-template-columns: minmax(0,1fr) 320px; gap: 0; }
 @media (max-width: 820px) { .bench-body { grid-template-columns: 1fr; } }
-#cubewrap { padding: 14px; display: flex; align-items: center; justify-content: center; background: var(--surface-2); }
+.cubewrap { padding: 14px; display: flex; align-items: center; justify-content: center; background: var(--surface-2); }
 #cube { display: block; width: 100%; max-width: 460px; height: auto; }
 .bench-side { padding: 18px 20px 22px; border-left: 1px solid var(--line); display: flex; flex-direction: column; gap: 16px; }
 @media (max-width: 820px) { .bench-side { border-left: 0; border-top: 1px solid var(--line); } }
@@ -217,8 +217,8 @@ button.b:disabled { opacity: .45; cursor: not-allowed; }
 button.b.p { background: var(--ink); color: var(--ground); border-color: var(--ink); }
 button.mv { font-family: "IBM Plex Mono", monospace; font-weight: 500; width: 44px; padding: 7px 0; text-align: center; }
 input[type=range] { accent-color: var(--estimate); width: 100%; }
-#status { font-size: 12.5px; color: var(--muted); min-height: 3.2em; line-height: 1.55; word-break: break-all; }
-#status b { color: var(--truth); }
+#status, #status3 { font-size: 12.5px; color: var(--muted); min-height: 3.2em; line-height: 1.55; word-break: break-all; }
+#status b, #status3 b { color: var(--truth); }
 .mini { font-size: 12.5px; color: var(--muted); line-height: 1.6; }
 
 .foot { margin-top: 74px; padding-top: 22px; border-top: 2px solid var(--ink); font-size: 14px; color: var(--muted); }
@@ -278,7 +278,7 @@ input[type=range] { accent-color: var(--estimate); width: 100%; }
         <div class="t" id="netmeta"></div>
       </div>
       <div class="bench-body">
-        <div id="cubewrap"><canvas id="cube" width="460" height="530"></canvas></div>
+        <div class="cubewrap"><canvas id="cube" width="460" height="530"></canvas></div>
         <div class="bench-side">
           <div class="readout">
             <div><span class="zh">網路猜還要</span><span class="en">network says</span><b class="est" id="rH">–</b></div>
@@ -716,6 +716,299 @@ input[type=range] { accent-color: var(--estimate); width: 100%; }
     </p>
     <p class="cap zh" id="note3"></p>
     <p class="cap en" id="note3e"></p>
+
+    <div class="bench" style="margin-top:34px">
+      <div class="bench-head">
+        <div class="t">3×3×3 sandbox</div>
+        <div class="t" id="b3meta"></div>
+      </div>
+      <div class="bench-body">
+        <div class="cubewrap"><canvas id="cube3" width="460" height="530"></canvas></div>
+        <div class="bench-side">
+          <div class="readout">
+            <div><span class="zh">已走步數</span><span class="en">moves played</span><b id="r3n">0</b></div>
+            <div><span class="zh">網路猜還要</span><span class="en">network says</span><b class="est" id="r3h">–</b></div>
+          </div>
+          <div class="ctl">
+            <button class="b p" id="b3Demo"><span class="zh">播那顆 GPU 解好的</span><span class="en">Replay the GPU solve</span></button>
+            <button class="b" id="b3Scr"><span class="zh">隨手打亂</span><span class="en">Scramble</span></button>
+            <button class="b" id="b3Reset"><span class="zh">還原</span><span class="en">Reset</span></button>
+          </div>
+          <div class="ctl" id="mvs3"></div>
+          <div class="mini" id="b3gpu"></div>
+          <div id="status3"></div>
+        </div>
+      </div>
+    </div>
+    <p class="cap zh">
+      這顆方塊你可以自己轉——規則引擎是完整的。但<strong>這裡沒有即時的網路推論</strong>：
+      「網路猜還要」那個數字只有在按下「播那顆 GPU 解好的」時才會動，
+      因為那一串是先在 <strong>RTX 4070 Ti SUPER</strong> 上算好、
+      連同每一步的估計值一起存進頁面的。自己亂轉的話那一格會是空的。
+      這個對比正是重點：<span id="b3cmp"></span>
+      為什麼瀏覽器做不到，下面那個框有完整的數字。
+    </p>
+    <p class="cap en">
+      You can turn this one by hand — the rules engine is complete. But <strong>there is no live network
+      inference here</strong>: the "network says" figure only moves while the GPU replay is playing,
+      because that sequence and its per-step estimates were computed beforehand on an
+      <strong>RTX 4070 Ti SUPER</strong> and baked into the page. Turn it yourself and that field stays
+      blank. The contrast is the point: <span id="b3cmpe"></span>
+      The box below has the numbers on why the browser cannot do it live.
+    </p>
+
+    <div class="callout" style="margin-top:34px">
+      <h3 class="zh">為什麼這一頁上面那個互動台只有 2×2×2</h3>
+      <h3 class="en">Why the live bench above is 2×2×2 only</h3>
+      <p class="zh">
+        這一節的數字全部是在 GPU 上跑出來的，不是在你的瀏覽器裡。
+        頁面最上面那個可以打亂、可以按「用 A* 解開」的方塊，只有 2×2×2 那一種。
+        <strong>在網頁上即時解一顆真的 3×3×3，用直接的做法目前做不到</strong>，
+        而且卡住的地方有兩個，兩個都不是「再優化一下」能過的。
+      </p>
+      <p class="en">
+        Every number in this section was produced on a GPU, not in your browser. The cube at the top of
+        this page — the one you can scramble and hand to A* — is the 2×2×2 only.
+        <strong>Solving a real 3×3×3 live in a web page is, by the straightforward route, currently out
+        of reach</strong>, and it is blocked in two independent places, neither of which is a matter of
+        optimising a bit harder.
+      </p>
+
+      <p class="zh"><strong>一、權重塞不進來。</strong>
+        3×3×3 的網路有 2,970,625 個參數，匯出成這一頁用的 JSON 格式是 <span class="num">21.88 MB</span>，
+        而一個 artifact 的上限是 <span class="num">16 MB</span>。
+        （降到 3 位小數只縮到 18.89 MB，而且誤差會從 0.005 步變成 0.048 步。）
+        2×2×2 那份只有 <span class="num">3.47 MB</span>，所以進得來。
+      </p>
+      <p class="en"><strong>One: the weights do not fit.</strong>
+        The 3×3×3 network has 2,970,625 parameters, which exports to <span class="num">21.88 MB</span> in
+        the JSON format this page uses, against a <span class="num">16 MB</span> ceiling per artifact.
+        (Rounding to three decimals only gets it to 18.89 MB, and pushes the rounding error from
+        0.005 to 0.048 moves.) The 2×2×2 weights are <span class="num">3.47 MB</span>, so they fit.
+      </p>
+
+      <p class="zh"><strong>二、就算塞得進來，也還是太慢。</strong>
+        純 JS 跑一次 297 萬參數的前向傳播約 <span class="num">5 毫秒</span>。
+        搜尋每展開一個節點就要算 12 個子節點，所以節點數直接換算成時間：
+      </p>
+      <p class="en"><strong>Two: even if they fit, it is still too slow.</strong>
+        One forward pass through 2.97 million parameters in plain JavaScript takes about
+        <span class="num">5 ms</span>. Each expanded node costs 12 child evaluations, so node counts
+        convert straight into wall-clock time:
+      </p>
+      <div class="scroller"><table>
+        <thead><tr>
+          <th><span class="zh">打亂步數</span><span class="en">scramble depth</span></th>
+          <th><span class="zh">展開節點</span><span class="en">nodes</span></th>
+          <th><span class="zh">瀏覽器耗時</span><span class="en">in-browser time</span></th>
+          <th><span class="zh">同一顆在 4070 Ti S 上</span><span class="en">same cube, RTX 4070 Ti S</span></th>
+        </tr></thead>
+        <tbody>
+          <tr><td class="n">4</td><td class="n">93</td><td class="n">3.1 s</td><td class="n">&lt; 0.01 s</td></tr>
+          <tr><td class="n">6</td><td class="n">173</td><td class="n">10.7 s</td><td class="n">&lt; 0.05 s</td></tr>
+          <tr><td class="n">8</td><td class="n">253</td><td class="n">17.2 s</td><td class="n">0.09 s</td></tr>
+          <tr class="hl"><td class="n">30</td><td class="n">29,757</td><td class="n">≈ 30 min</td><td class="n">0.87 s</td></tr>
+        </tbody>
+      </table></div>
+      <p class="cap zh">
+        瀏覽器那一欄是實測（打亂 4 / 6 / 8 步），最後一列是照 5 毫秒一個局面推算的：
+        29,757 個節點 × 12 個子節點 × 5 毫秒 ≈ 半小時。一顆隨機打亂的 3×3×3 就是這個量級。
+      </p>
+      <p class="cap en">
+        The browser column is measured at depths 4, 6 and 8; the last row is extrapolated at 5 ms per
+        state: 29,757 nodes × 12 children × 5 ms ≈ half an hour. That is what one ordinary scrambled
+        3×3×3 costs.
+      </p>
+
+      <p class="zh"><strong>所以第二個問題才是真的門檻。</strong>
+        把權重壓成 float16 再 base64 進來大約 7.9 MB，總共 11.6 MB，是塞得進 16 MB 的——
+        但那只買到「即時顯示網路猜還要幾步」（一次前向傳播，5 毫秒），
+        以及打亂 6 步以內的現場搜尋。真正的隨機局面還是三十分鐘。
+        要在網頁上即時解，得換路：更小的網路、WebGPU、或者乾脆把搜尋放到伺服器上跑。
+        這一頁選擇的是第四條——<strong>只放 2×2×2，並且把這件事寫出來</strong>。
+      </p>
+      <p class="en"><strong>So the second wall is the real one.</strong>
+        Quantising the weights to float16 and base64-ing them in comes to roughly 7.9 MB — 11.6 MB in
+        total, comfortably under the ceiling — but that only buys a live "how far is this" readout (one
+        forward pass, 5 ms) and live search on scrambles of six moves or fewer. A genuine random state is
+        still half an hour. Solving one live in a page needs a different route: a much smaller network,
+        WebGPU, or moving the search to a server. This page took a fourth option —
+        <strong>ship the 2×2×2 and say so</strong>.
+      </p>
+      <p class="zh" style="margin-bottom:0">
+        想在本機玩 3×3×3 的話，repo 裡的
+        <code>web/index.html</code> 有 3×3×3 那一頁（權重也一起放了），
+        深的局面就交給 <code>python ml/benchmark.py --size 3</code>。
+      </p>
+      <p class="en" style="margin-bottom:0">
+        To play with the 3×3×3 locally, <code>web/index.html</code> in the repo has a 3×3×3 tab and ships
+        its weights; hand the deep ones to <code>python ml/benchmark.py --size 3</code>.
+      </p>
+    </div>
+
+    <h3 style="margin-top:40px" class="zh">一個開放題：只用瀏覽器，60 秒內解開任何一顆 3×3×3</h3>
+    <h3 style="margin-top:40px" class="en">An open problem: any 3×3×3, in a browser, under 60 seconds</h3>
+    <p class="zh">
+      前面那些數字剛好把一個題目定義得很清楚，所以把它寫下來。
+      <strong>限制</strong>：只有瀏覽器（沒有伺服器、沒有原生程式）；任意打亂的 3×3×3；
+      六十秒內給出解——而且<strong>解法必須來自學出來的估計值加上搜尋</strong>。
+    </p>
+    <p class="en">
+      The numbers above happen to pin down a rather clean problem, so here it is.
+      <strong>Constraints</strong>: browser only — no server, no native binary; any scrambled 3×3×3;
+      a solution within sixty seconds — and <strong>the solution must come from a learned estimate plus
+      search</strong>.
+    </p>
+    <div class="callout">
+      <h3 class="zh">最後那一條才是題目</h3>
+      <h3 class="en">That last clause is the whole problem</h3>
+      <p class="zh">
+        少了它，這題五分鐘就結束：Kociemba 的兩階段演算法在瀏覽器裡毫秒級就解得完，
+        而且已經有現成的函式庫。<strong>「把魔術方塊解開」本身早就不是問題了。</strong>
+        這一頁在比的是另一件事——不給任何人類寫死的解法，能不能學出來。
+        所以這個挑戰只有加上「heuristic 必須是學的」才有意義。
+      </p>
+      <p class="en">
+        Without it the problem is over in five minutes: Kociemba's two-phase algorithm solves a cube in
+        milliseconds in a browser, and off-the-shelf libraries exist.
+        <strong>Solving a Rubik's cube stopped being the hard part decades ago.</strong> What this page is
+        about is the other thing — whether it can be learned with no human algorithm handed to it. The
+        challenge only means anything with "the heuristic must be learned" attached.
+      </p>
+    </div>
+
+    <p class="zh"><strong>現在差多少。</strong>全部從這一頁量到的數字推出來，沒有一個是估的：</p>
+    <p class="en"><strong>How far off is it today?</strong> Every figure below follows from measurements
+      on this page:</p>
+    <div class="scroller"><table>
+      <tbody>
+        <tr><td><span class="zh">一顆隨機方塊要展開的節點</span><span class="en">nodes per random cube</span></td>
+            <td class="n">29,757</td></tr>
+        <tr><td><span class="zh">× 每個節點 12 個子節點 = 要算的局面</span><span class="en">× 12 children = states to evaluate</span></td>
+            <td class="n">357,084</td></tr>
+        <tr><td><span class="zh">純 JS 一個局面（實測）</span><span class="en">per state, plain JS (measured)</span></td>
+            <td class="n">≈ 5 ms</td></tr>
+        <tr><td><span class="zh">合計</span><span class="en">total</span></td>
+            <td class="n">≈ 30 min</td></tr>
+        <tr class="hl"><td><span class="zh">要壓進 60 秒，需要快</span><span class="en">to fit in 60 s, speed-up needed</span></td>
+            <td class="n">30×</td></tr>
+        <tr><td><span class="zh">換算成吞吐量：現在 → 需要</span><span class="en">as throughput: now → needed</span></td>
+            <td class="n">1.2 → 35 GFLOP/s</td></tr>
+      </tbody>
+    </table></div>
+    <p class="cap zh">
+      每算一個局面要跑一次 2,970,625 個參數的前向傳播，約 5.9 MFLOP。
+      每秒 5,951 個局面就是 35 GFLOP/s。
+    </p>
+    <p class="cap en">
+      Each state is one forward pass through 2,970,625 parameters, about 5.9 MFLOP.
+      5,951 states per second is 35 GFLOP/s.
+    </p>
+
+    <p class="zh"><strong>技術挑戰在哪。</strong>直覺會說「用 WebGPU 就好了」——
+      算力那一關確實是這樣過的（一顆整合顯示晶片就有 TFLOP/s 等級，35 GFLOP/s 不是問題）。
+      但真正卡住的地方都不在算力：</p>
+    <p class="en"><strong>Where the difficulty actually is.</strong> The instinct is "just use WebGPU" —
+      and for raw arithmetic that is right (an integrated GPU is in the TFLOP/s range; 35 GFLOP/s is not
+      the issue). The things that actually block it are elsewhere:</p>
+
+    <div class="callout">
+      <h3 class="zh">一、搜尋是序列的，GPU 喜歡的是批次</h3>
+      <h3 class="en">1. Search is sequential; GPUs want batches</h3>
+      <p class="zh">
+        要決定下一批展開誰，得先拿到這一批的估計值。所以一顆方塊不是「一次大 dispatch」，
+        而是幾十次來回，每一次都要：CPU 準備輸入 → 上傳 → 算 → <strong>把結果讀回 CPU</strong>。
+        最後那一步在 WebGPU 上相對昂貴，而且它擋在關鍵路徑上，藏不掉。
+      </p>
+      <p class="en">
+        Deciding which nodes to expand next requires the estimates for the current batch. So one cube is
+        not one big dispatch but dozens of round trips, each of them: prepare inputs on the CPU, upload,
+        compute, <strong>read the results back</strong>. That last step is comparatively expensive in
+        WebGPU, and it sits on the critical path where it cannot be hidden.
+      </p>
+    </div>
+    <div class="callout">
+      <h3 class="zh">二、把批次調大會把 A* 變回 BFS</h3>
+      <h3 class="en">2. Making the batch bigger turns A* back into BFS</h3>
+      <p class="zh">
+        想少幾次來回，直覺是一次多拿一點節點。但這一頁前面已經量過那個代價：
+        批次大到把優先佇列整個彈光，順序就不存在了，搜尋退化成廣度優先——
+        2×2×2 上 batch=200 多花了 <strong>54 倍</strong>的節點。
+        3×3×3 的樹大得多，所以幾千的批次還安全，但這個張力是真的：
+        <strong>你為了餵飽 GPU 而放大的批次，會反過來讓你要算的局面變多。</strong>
+      </p>
+      <p class="en">
+        The obvious way to cut round trips is to pop more nodes at once. The price is measured earlier on
+        this page: once the batch drains the priority queue, ordering stops existing and the search
+        degenerates into breadth-first — <strong>54× the nodes</strong> at batch 200 on the 2×2×2. A 3×3×3
+        tree is far wider so batches in the thousands stay safe, but the tension is real:
+        <strong>the batch you enlarge to feed the GPU enlarges the work you have to feed it.</strong>
+      </p>
+    </div>
+    <div class="callout">
+      <h3 class="zh">三、推論加速 30 倍之後，瓶頸會換人</h3>
+      <h3 class="en">3. Speed up inference 30× and the bottleneck moves</h3>
+      <p class="zh">
+        357,084 個子節點全部要進優先佇列、要去重。現在這件事被 5 毫秒的推論蓋住了，
+        看不見；推論一旦快 30 倍，它就浮上來變成主角。
+        目前的實作用 JS 的 <code>Map</code>、鍵是 54 個字元的字串——三十幾萬次雜湊加配置。
+        得換成 typed array 的堆積、加上整數指紋。
+        <strong>優化到最後，難的往往不是那個你以為很重的東西。</strong>
+      </p>
+      <p class="en">
+        All 357,084 children have to enter a priority queue and be de-duplicated. Right now that cost hides
+        behind the 5 ms inference; make inference 30× faster and it becomes the main event. The current
+        implementation uses a JS <code>Map</code> keyed by 54-character strings — a third of a million
+        hashes and allocations. It would need a typed-array heap and integer fingerprints.
+        <strong>By the end of an optimisation, the hard part is rarely the thing that looked heavy.</strong>
+      </p>
+    </div>
+    <div class="callout">
+      <h3 class="zh">四、權重要先進得來，而且不能走 JSON</h3>
+      <h3 class="en">4. The weights have to arrive, and not as JSON</h3>
+      <p class="zh">
+        22 MB 的 JSON 光解析就要好幾秒，還會佔掉頁面的大小預算。
+        得改成 fp16 的二進位（約 5.9 MB），直接上傳成 GPU buffer。
+        順帶要接受的是：fp16 的捨入誤差會讓估計值抖動一點，
+        而那個抖動會不會讓搜尋多展開節點，得量過才知道。
+      </p>
+      <p class="en">
+        22 MB of JSON costs seconds just to parse, and eats the page's size budget. It would have to become
+        an fp16 binary (about 5.9 MB) uploaded straight into a GPU buffer. With a caveat to measure rather
+        than assume: fp16 rounding perturbs the estimates, and whether that perturbation costs extra nodes
+        is an empirical question.
+      </p>
+    </div>
+    <div class="callout" style="border-left-color:var(--truth)">
+      <h3 class="zh">五、但最划算的那一條，根本不是工程</h3>
+      <h3 class="en">5. But the best move here isn't engineering at all</h3>
+      <p class="zh">
+        回頭看第一行：<strong>29,757 個節點</strong>。那個數字不是物理常數，
+        是這個 heuristic 不夠準的直接後果——它對深局面一律回答 14 左右，而真值在 20 以上，
+        所以搜尋得替它把那幾步補回來。
+        把網路練好（DeepCubeA 原本用的算力是這裡的幾百倍），節點數有機會掉一個數量級。
+        <strong>與其把推論加速 30 倍，不如讓它少算 30 倍的局面。</strong>
+        整頁講到這裡其實是同一件事：這套方法真正的槓桿在估計值的品質，不在搜尋跑多快。
+      </p>
+      <p class="en">
+        Look back at the first row: <strong>29,757 nodes</strong>. That is not a physical constant — it is
+        a direct consequence of the heuristic being weak. It answers about 14 for deep states whose true
+        distance is past 20, and the search pays the difference back. Train the network properly
+        (DeepCubeA used hundreds of times the compute spent here) and the node count could fall by an
+        order of magnitude. <strong>Rather than making inference 30× faster, make it evaluate 30× fewer
+        states.</strong> Which is the same thing this whole page has been saying: the leverage in this
+        method is in the quality of the estimate, not the speed of the search.
+      </p>
+    </div>
+    <p class="cap zh">
+      如果有人做出來了，我想看的不只是「解開了」，是那張表：一顆隨機方塊展開幾個節點、
+      多少毫秒花在推論、多少花在佇列、多少花在 GPU 來回。那才看得出來瓶頸真的搬到哪裡去了。
+    </p>
+    <p class="cap en">
+      If someone builds it, the interesting artefact is not "it solved" — it is the breakdown: nodes per
+      random cube, and how the milliseconds split between inference, the queue, and GPU round trips.
+      That is what shows where the bottleneck actually ended up.
+    </p>
   </div>
 </section>
 
@@ -1032,6 +1325,20 @@ function paint() {
   $("footMeta").textContent = isEn() ? "" : meta;
   $("footMetaE").textContent = isEn() ? meta : "";
   $("netmeta").textContent = `${fmt(POLICY.n_params)} params · MAE ${H.mae.toFixed(2)}`;
+  const D = DATA.demo3;
+  const bm = $("b3meta");
+  if (bm) bm.textContent = T("2,970,625 params · 權重在頁面外", "2,970,625 params · weights not shipped here");
+  const bg = $("b3gpu");
+  if (bg) bg.innerHTML = T(
+    `這一顆在 <b>RTX 4070 Ti SUPER</b> 上：解 ${D.solution.length} 步 · 展開 ${fmt(D.nodes)} 個節點 · `
+      + `<b>${(D.ms / 1000).toFixed(1)} 秒</b>。同樣的搜尋在這個瀏覽器裡跑，約要半小時。`,
+    `This cube on an <b>RTX 4070 Ti SUPER</b>: ${D.solution.length} moves · ${fmt(D.nodes)} nodes · `
+      + `<b>${(D.ms / 1000).toFixed(1)} s</b>. The same search in this browser would take about half an hour.`);
+  const cmp = $("b3cmp");
+  if (cmp) cmp.textContent = `這顆在 GPU 上花 ${(D.ms / 1000).toFixed(1)} 秒，同樣的搜尋搬到瀏覽器要約半小時——差了三個數量級。`;
+  const cmpe = $("b3cmpe");
+  if (cmpe) cmpe.textContent = `${(D.ms / 1000).toFixed(1)} seconds on the GPU, about half an hour for the same search in a browser — three orders of magnitude.`;
+  if (typeof show3 === "function") show3();
 
   drawHist(); drawErr(); tol();
 }
@@ -1206,8 +1513,81 @@ function loop(now) {
   requestAnimationFrame(loop);
 }
 
+// ── 3×3×3 沙盒 ──────────────────────────────────────────────
+// 這裡沒有網路。3x3x3 的權重 21.88 MB，塞不進 artifact 的 16 MB 上限；
+// 就算塞得進來，純 JS 一個局面 5 毫秒，一顆隨機打亂要展開三萬個節點 ≈ 半小時。
+// 所以這個台子能做兩件事：讓你自己轉，以及重播一顆先在 GPU 上解好的方塊。
+const D3 = DATA.demo3;
+const C3 = new Cube(MOVES3);
+const V3 = new CubeView(C3, VIEW.colors);
+const cv3 = $("cube3"), x3 = cv3.getContext("2d");
+let s3 = C3.solved(), q3 = [], a3 = null, hseq = null, step3 = 0;
+
+$("mvs3").innerHTML = "";
+C3.moveNames.forEach((n, i) => {
+  const b = document.createElement("button");
+  b.className = "b mv"; b.textContent = n;
+  b.onclick = () => { hseq = null; q3.push(i); };
+  $("mvs3").appendChild(b);
+});
+const reset3 = () => { s3 = C3.solved(); q3 = []; hseq = null; step3 = 0; show3(); };
+$("b3Reset").onclick = () => { reset3(); $("status3").textContent = ""; };
+$("b3Scr").onclick = () => {
+  reset3();
+  const { seq } = C3.scramble(25);
+  seq.forEach((m) => q3.push(m));
+  $("status3").textContent = T("隨手打亂 25 步。這顆沒有先算好的解，所以只能自己轉回去。",
+                               "25 random turns. No precomputed solution for this one — you are on your own.");
+};
+$("b3Demo").onclick = () => {
+  reset3();
+  hseq = D3.h;
+  D3.scramble.forEach((m) => q3.push(m));
+  D3.solution.forEach((m) => q3.push(m));
+  $("status3").innerHTML = T(
+    `先打亂 ${D3.scramble.length} 步，再播加權 A*（weight=${D3.weight}）找到的解：`
+      + `<b>${D3.solution.length} 步</b>・展開 ${fmt(D3.nodes)} 個節點・${(D3.ms / 1000).toFixed(1)} 秒（RTX 4070 Ti SUPER）`,
+    `${D3.scramble.length} turns of scramble, then the solution weighted A* (weight=${D3.weight}) found: `
+      + `<b>${D3.solution.length} moves</b> · ${fmt(D3.nodes)} nodes · ${(D3.ms / 1000).toFixed(1)} s (RTX 4070 Ti SUPER)`);
+};
+
+function show3() {
+  $("r3n").textContent = String(step3);
+  const v = hseq && step3 < hseq.length ? hseq[step3] : null;
+  $("r3h").textContent = v == null ? "–" : v.toFixed(2);
+  $("r3h").style.fontSize = "";
+}
+
+function loop3(now) {
+  if (!a3 && q3.length) {
+    const m = q3.shift(), nm = C3.moveNames[m];
+    a3 = { move: m, face: nm[0], dir: nm.endsWith("'") ? 1 : -1, t0: now };
+  }
+  if (a3) {
+    const p = Math.min(1, (now - a3.t0) / TURN);
+    const e = p < .5 ? 2 * p * p : 1 - 2 * (1 - p) * (1 - p);
+    a3.angle = a3.dir * e * Math.PI / 2;
+    if (p >= 1) { s3 = C3.apply(s3, a3.move); a3 = null; step3++; show3(); }
+  }
+  x3.clearRect(0, 0, cv3.width, cv3.height);
+  V3.colors = VIEW.colors;
+  V3.yaw = -0.62 + Math.sin(now / 5200) * 0.16;
+  V3.draw(x3, s3, { cx: 230, cy: 205, scale: 38, anim: a3 ? { face: a3.face, angle: a3.angle } : null });
+  const cell3 = 14, fw3 = C3.n * cell3 + 3;
+  drawNet(x3, C3, s3, V3.colors, 230 - 2 * fw3, 366, cell3, 3);
+  if (C3.isSolved(s3) && !a3) {
+    x3.fillStyle = css("--truth");
+    x3.font = '600 14px "Noto Sans TC", system-ui, sans-serif';
+    x3.textAlign = "center";
+    x3.fillText(T("解開了", "solved"), 230, 516);
+  }
+  requestAnimationFrame(loop3);
+}
+
 setLang("zh");
 refresh();
+show3();
 requestAnimationFrame(loop);
+requestAnimationFrame(loop3);
 window.addEventListener("resize", () => { drawHist(); drawErr(); });
 </script>

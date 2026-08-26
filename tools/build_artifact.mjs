@@ -30,6 +30,7 @@ const b2 = rj("ml/checkpoints/benchmark-2x2.json");
 const engine = [
   `// ── 轉動表（shared/moves.json 的 2x2x2 那份，由 ml/gen_moves.py 從幾何算出來）──`,
   `const MOVES2 = ${JSON.stringify(moves["2"])};`,
+  `const MOVES3 = ${JSON.stringify(moves["3"])};`,
   ...MODULES.map((m) => `\n// ──────── ${m} ────────\n${strip(rd(m))}`),
 ].join("\n");
 
@@ -45,6 +46,22 @@ const DATA = {
   randomStats: demo.randomStats,
   batchAblation: b2.batch_ablation,
 };
+
+// 3x3x3 那個沙盒用的資料。權重 21.88 MB 塞不進 artifact 的 16 MB，
+// 所以頁面上不做 3x3x3 的推論——只放一顆先在 GPU 上解好的方塊給它重播，
+// 連同沿路每一站網路猜幾步（也是先算好的）。幾 KB 而已。
+{
+  const c3 = demo.cases["3"][0];
+  const run3 = c3.runs[demo.defaultWeight["3"]];
+  DATA.demo3 = {
+    scramble: c3.scramble,
+    solution: run3.seq,
+    h: c3.hScramble.concat(run3.h),
+    nodes: run3.nodes,
+    ms: run3.ms,
+    weight: Number(demo.defaultWeight["3"]),
+  };
+}
 
 // HTML 原始碼為了好讀而換的行，落在兩個全形字之間會被瀏覽器算成一個空格
 // （「…網路猜的；\n      橘色帶子…」會變成「網路猜的； 橘色帶子」）。
