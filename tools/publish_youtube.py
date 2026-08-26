@@ -42,7 +42,7 @@ PLAYLIST_DESC = (
 )
 
 # Claude artifact 預設是私人的，擁有者去分享之後外人才打得開。
-ARTIFACT_URL = "__ARTIFACT_URL__"
+ARTIFACT_URL = "https://claude.ai/code/artifact/f755f774-a455-47e8-ac5a-711fd6ecf763"
 
 VIDEO = os.path.join(ROOT, "out", "rubik-deepcubea.mp4")
 PLAN = os.path.join(ROOT, "out", "plan.json")
@@ -218,14 +218,14 @@ def build_description(playlist_url):
 
 ── 怎麼做的 ──
 ・轉動表：從立方體的 3D 座標算出來，不是手打的。順時針轉一面就是繞法向量轉 −90 度，
-　p' = a(a·p) − (a×p)。算完會自我檢查：每個動作的階是 4、3×3×3 的 (R U) 是 105、
-　2×2×2 的是 15、(R U R' U') 是 6。錯一個數字就當場爆掉，不會拖到訓練完才發現。
+　p' = a(a·p) − (a×p)。算完會用群論性質自我檢查（(R U) 的階是 105 等等），
+　錯一個數字就當場爆掉，不會拖到訓練完才發現。
 ・訓練：DAVI（deep approximate value iteration）。沒有環境互動、沒有 episode、
 　沒有 replay buffer、沒有 epsilon。資料是從解開狀態往回亂轉造出來的。
 　目標 y(s) = min over a [ 1 + h_target(a(s)) ]——跟策略無關，所以爛策略帶不壞它。
 ・搜尋：批次加權 A*。一次從佇列拿 N 個最好的節點，子節點湊成一批送 GPU。
 ・部署：權重把 BatchNorm 摺進線性層之後匯出成 JSON，瀏覽器用純 JS 前向傳播，
-　不需要 TensorFlow.js。JS 與 Python 兩邊逐格對帳，推論誤差 < 1e-5。
+　不需要 TensorFlow.js。JS 與 Python 兩邊逐格對帳，推論誤差小於 1e-5。
 ・網頁上的「正確答案」：雙向 BFS，兩邊各走 7 步一定相遇（上帝之數 14），
 　只要看不到十萬個局面。單向走 14 步要看三百六十七萬個——那就撐不住了。
 ・語音：edge-tts zh-TW-HsiaoChenNeural
@@ -270,6 +270,10 @@ def main():
     with io.open(DESC_PATH, "w", encoding="utf-8") as f:
         f.write(desc)
 
+    bad = [c for c in "<>" if c in desc]
+    if bad:
+        raise SystemExit(f"描述裡有 {bad} — YouTube 的 videos.insert 不接受角括號"
+                         "（會回 invalidDescription）。改成「小於」「大於」之類的寫法。")
     if len(desc) > 5000:
         raise SystemExit(f"描述 {len(desc)} 字元，超過 YouTube 的 5000 上限 {len(desc)-5000} 字。"
                          "先把 build_description() 修短再跑。")

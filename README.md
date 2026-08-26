@@ -39,9 +39,9 @@ tools/                   影片與 artifact 的產線
 
 ## 成果
 
-- **影片**（7:21，繁中旁白）__VIDEO_URL__
+- **影片**（7:21，繁中旁白）https://youtu.be/CxS1-wK8j5s
 - **可互動圖文版**（中英雙語，網頁上的網路是真的在跑推論，2×2×2 還會即時算出精確答案跟它對照）
-  __ARTIFACT_URL__
+  https://claude.ai/code/artifact/f755f774-a455-47e8-ac5a-711fd6ecf763
 
 ## 快速開始
 
